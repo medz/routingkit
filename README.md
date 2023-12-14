@@ -1,6 +1,13 @@
-<h1 align="center" style="font-size: 36px">
-    <storage style="font-weight: 800">Routing</storage>Kit
-</h1>
+<h1 align="center" style="font-size: 36px">RoutingKit</h1>
+
+<p align="center">
+  <a href="https://pub.dev/packages/routingkit">
+    <img src="https://img.shields.io/pub/v/routingkit.svg" alt="Pub">
+  </a>
+  <a href="https://github.com/medz/routingkit/blob/main/LICENSE"
+    <img src="https://img.shields.io/github/license/medz/routingkit.svg" alt="License">
+  </a>
+</p>
 
 <p align="center">
 Routing Kit is a High-performance trie-node router.
@@ -126,4 +133,4 @@ final router = TrieRouter(
 
 ## License
 
-Routing Kit is licensed under the MIT license. See the [LICENSE](LICENSE) file for more info.
+Routing Kit is licensed under the MIT license. See the [LICENSE](https://github.com/medz/routingkit/blob/main/LICENSE) file for more info.
