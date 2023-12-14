@@ -4,7 +4,7 @@
   <a href="https://pub.dev/packages/routingkit">
     <img src="https://img.shields.io/pub/v/routingkit.svg" alt="Pub">
   </a>
-  <a href="https://github.com/medz/routingkit/blob/main/LICENSE"
+  <a href="https://github.com/medz/routingkit/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/medz/routingkit.svg" alt="License">
   </a>
 </p>
