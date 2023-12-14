@@ -2,7 +2,7 @@ name: routingkit
 description: >-
   High-performance trie-node router.
   Routing Kit can help you quickly build a high-performance router. It is based on Trie-Node and supports dynamic routing, static routing, parameter routing, wildcard routing, etc.
-version: 0.0.2
+version: 0.0.3
 repository: https://github.com/medz/routingkit
 
 funding:
