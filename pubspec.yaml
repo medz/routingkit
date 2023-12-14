@@ -1,7 +1,7 @@
 name: routingkit
 description: High-performance trie-node router.
 version: 0.0.1
-repository: https://github.com/medz/trie-router
+repository: https://github.com/medz/routingkit
 
 environment:
   sdk: ^3.2.3
