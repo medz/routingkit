@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:trie_router/src/_internal/node.dart';
-import 'package:trie_router/trie_router.dart';
+import 'package:routingkit/src/_internal/node.dart';
+import 'package:routingkit/routingkit.dart';
 
 void main() {
   test('Base routing', () {

@@ -1,5 +1,5 @@
 import 'package:benchmark_harness/benchmark_harness.dart';
-import 'package:trie_router/trie_router.dart';
+import 'package:routingkit/routingkit.dart';
 
 class RoutingMatchFirstBenchmark extends BenchmarkBase {
   final bool caseSensitive;

@@ -1,4 +1,4 @@
-name: trie_router
+name: routingkit
 description: High-performance trie-node router.
 version: 0.0.1
 repository: https://github.com/medz/trie-router

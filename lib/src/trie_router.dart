@@ -1,9 +1,9 @@
 import 'package:logging/logging.dart';
-import 'package:trie_router/src/parameters.dart';
-import 'package:trie_router/src/path_component.dart';
 
 import 'configuration_options.dart';
 import '_internal/node.dart';
+import 'parameters.dart';
+import 'path_component.dart';
 import 'router.dart';
 
 /// Generic [TrieRouter] built using the `trie` tree algorithm.

@@ -1,4 +1,4 @@
-library trie_router;
+library routingkit;
 
 export 'src/configuration_options.dart';
 export 'src/parameters.dart';

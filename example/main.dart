@@ -1,4 +1,4 @@
-import 'package:trie_router/trie_router.dart';
+import 'package:routingkit/routingkit.dart';
 
 void main() {
   final router = TrieRouter();
