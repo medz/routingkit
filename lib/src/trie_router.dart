@@ -64,7 +64,7 @@ class TrieRouter<T> implements Router<T> {
       // No matches, return catch all if we have one
       if (currentCatchAll case (Node<T> catchAll, Iterable<String> values)) {
         // fallback to catchall output if we have one
-        parameters.setCatchAll(values);
+        parameters.setCatchall(values);
 
         return catchAll.value;
       }
@@ -76,7 +76,7 @@ class TrieRouter<T> implements Router<T> {
     if (currentNode.value != null) return currentNode.value;
     if (currentCatchAll case (Node<T> catchAll, Iterable<String> values)) {
       // fallback to catchall output if we have one
-      parameters.setCatchAll(values);
+      parameters.setCatchall(values);
 
       return catchAll.value;
     }
@@ -94,9 +94,9 @@ class TrieRouter<T> implements Router<T> {
     // for each dynamic path in the route get the appropriate node,
     // creating it if it doesn't exist.
     for (final (index, component) in path.indexed) {
-      if (component is CatchAllPathComponent) {
-        assert(index == path.length - 1,
-            'Catch all must be the last path component');
+      if (component is CatchallPathComponent && index < path.length - 1) {
+        throw ArgumentError.value(
+            component, 'path', 'Catchall must be the last path component');
       }
 
       current = current.childOrCreate(component, options);
@@ -105,7 +105,7 @@ class TrieRouter<T> implements Router<T> {
     // If the node already has a value, it means that the route is duplicated.
     if (current.value != null) {
       logger.info(
-          'Overriding duplicate route for ${path.elementAt(0).description} ${path.skip(1).toPathComponentsString()}');
+          'Overriding duplicate route for ${path.elementAt(0).description} ${path.skip(1).path}');
     }
 
     current.value = value;

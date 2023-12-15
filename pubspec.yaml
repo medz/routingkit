@@ -2,7 +2,7 @@ name: routingkit
 description: >-
   High-performance trie-node router.
   It is based on Trie-Node and supports dynamic, static, parameter, wildcard routing, etc.
-version: 0.0.3
+version: 0.0.4
 repository: https://github.com/medz/routingkit
 
 funding:
@@ -16,7 +16,7 @@ topics:
   - trie-node
 
 environment:
-  sdk: ^3.2.3
+  sdk: '>=3.0.0 <3.3.0'
 
 dependencies:
   logging: ^1.2.0

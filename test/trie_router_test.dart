@@ -55,7 +55,7 @@ void main() {
       ..register(4, [
         PathComponent('e'),
         PathComponent.parameter('1'),
-        PathComponent.catchAll
+        PathComponent.catchall
       ])
       ..register(5, [
         PathComponent.anything,
@@ -154,12 +154,12 @@ void main() {
   // Catch all nesting
   test('Catch all nesting', () {
     final router = TrieRouter<String>()
-      ..register('/**', [PathComponent.catchAll])
-      ..register('/a/**', [PathComponent.constant('a'), PathComponent.catchAll])
+      ..register('/**', [PathComponent.catchall])
+      ..register('/a/**', [PathComponent.constant('a'), PathComponent.catchall])
       ..register('/a/b/**', [
         PathComponent.constant('a'),
         PathComponent.constant('b'),
-        PathComponent.catchAll
+        PathComponent.catchall
       ])
       ..register('/a/b', [
         PathComponent.constant('a'),
@@ -182,7 +182,7 @@ void main() {
     router.register(
         'a', [PathComponent.constant('v1'), PathComponent.constant('test')]);
     router
-        .register('b', [PathComponent.constant('v1'), PathComponent.catchAll]);
+        .register('b', [PathComponent.constant('v1'), PathComponent.catchall]);
     router
         .register('c', [PathComponent.constant('v1'), PathComponent.anything]);
 
@@ -203,14 +203,14 @@ void main() {
     final parameters = Parameters();
 
     expect(router.lookup(['users'], parameters), isNull);
-    expect(parameters.getCatchAll(), isEmpty);
+    expect(parameters.getCatchall(), isEmpty);
 
     expect(router.lookup(['users', 'foo'], parameters), equals(1));
-    expect(parameters.getCatchAll(), ['foo']);
+    expect(parameters.getCatchall(), ['foo']);
 
     expect(
         router.lookup(['users', 'seven', 'posts', '2'], parameters), equals(0));
-    expect(parameters.getCatchAll(), ['posts', '2']);
+    expect(parameters.getCatchall(), ['posts', '2']);
   });
 
   // Router description
@@ -219,25 +219,25 @@ void main() {
         constOne = PathComponent.constant('1'),
         paramOne = PathComponent.parameter('1'),
         anything = PathComponent.anything,
-        catchAll = PathComponent.catchAll;
+        catchall = PathComponent.catchall;
 
     final router = TrieRouter()
       ..register(0, [constA, anything])
-      ..register(1, [constA, constOne, catchAll])
+      ..register(1, [constA, constOne, catchall])
       ..register(1, [constA, constOne, anything])
       ..register(1, [anything, constA, paramOne])
-      ..register(1, [catchAll]);
+      ..register(1, [catchall]);
 
     final String description = '''
 $rightArrow ${constA.description}
 $space$rightArrow ${constOne.description}
 $space$space$rightArrow ${anything.description}
-$space$space$rightArrow ${catchAll.description}
+$space$space$rightArrow ${catchall.description}
 $space$rightArrow ${anything.description}
 $rightArrow ${anything.description}
 $space$rightArrow ${constA.description}
 $space$space$rightArrow ${paramOne.description}
-$rightArrow ${catchAll.description}''';
+$rightArrow ${catchall.description}''';
 
     expect(router.description, equals(description));
   });

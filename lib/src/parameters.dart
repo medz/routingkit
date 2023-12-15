@@ -1,16 +1,8 @@
-import 'package:logging/logging.dart';
-
 class Parameters {
-  late final Logger logger;
-
   //------ Internals ------
   final _values = <String, String>{};
-  _CatchAll? _catchAll;
+  _Catchall? _catchall;
   //-----------------------
-
-  Parameters([Logger? logger]) {
-    this.logger = logger ?? Logger('trie-router');
-  }
 
   /// Returns all parameters names.
   Set<String> get allNames => _values.keys.toSet();
@@ -48,42 +40,42 @@ class Parameters {
     _values[name] = value.decodeComponent();
   }
 
-  /// Returns the components matched by the catch all.(**)
+  /// Returns the components matched by the catchall.(**)
   ///
   /// If no catch all was matched, an empty list is returned.
   ///
   /// you can judge whether `catchAll` is hit using:
   ///
   /// ```dart
-  /// final catchAll = parameters.getCatchAll();
+  /// final catchAll = parameters.getCatchall();
   ///
   /// if (catchAll.isEmpty) {
   ///   // no catch all was matched.
   /// }
   /// ```
-  Iterable<String> getCatchAll() {
-    if (_catchAll?.encoded == true) {
-      final values = _catchAll!.values.map((e) => e.decodeComponent());
-      _catchAll = _CatchAll(values, false);
+  Iterable<String> getCatchall() {
+    if (_catchall?.encoded == true) {
+      final values = _catchall!.values.map((e) => e.decodeComponent());
+      _catchall = _Catchall(values, false);
     }
 
-    return _catchAll?.values ?? const {};
+    return _catchall?.values ?? const {};
   }
 
-  /// Stores the components matched by the catch all.(**)
+  /// Stores the components matched by the catchall.(**)
   ///
   /// - [values]: The values to store.
   /// - [encoded]: Whether the values are encoded.
-  void setCatchAll(Iterable<String> values) {
-    _catchAll = _CatchAll(values);
+  void setCatchall(Iterable<String> values) {
+    _catchall = _Catchall(values);
   }
 }
 
-class _CatchAll {
+class _Catchall {
   final Iterable<String> values;
   final bool encoded;
 
-  const _CatchAll(this.values, [this.encoded = true]);
+  const _Catchall(this.values, [this.encoded = true]);
 }
 
 extension on String {

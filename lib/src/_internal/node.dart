@@ -58,7 +58,7 @@ class Node<T> {
       ConstantPathComponent(constant: final value) =>
         _createConstantChild(value, options),
       ParameterPathComponent(identifier: final value) => _createWildcard(value),
-      CatchAllPathComponent() => _createCatchAll(),
+      CatchallPathComponent() => _createCatchall(),
       AnythingPathComponent() => _createAnything(),
     };
   }
@@ -107,8 +107,8 @@ extension<T> on Node<T> {
     return wildcard.node;
   }
 
-  /// Creates a new catch-all child node.
-  Node<T> _createCatchAll() {
+  /// Creates a new catchall child node.
+  Node<T> _createCatchall() {
     return catchAll = switch (catchAll) {
       null => Node(),
       Node<T> catchAll => catchAll,

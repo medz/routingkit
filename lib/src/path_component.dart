@@ -4,12 +4,12 @@ sealed class PathComponent {
       ParameterPathComponent;
 
   static const anything = AnythingPathComponent();
-  static const catchAll = CatchAllPathComponent();
+  static const catchall = CatchallPathComponent();
 
   factory PathComponent(String value) {
     return switch (value) {
       '*' => anything,
-      '**' => catchAll,
+      '**' => catchall,
       _ => value.startsWith(':')
           ? ParameterPathComponent(value.substring(1))
           : ConstantPathComponent(value),
@@ -65,35 +65,42 @@ final class AnythingPathComponent implements PathComponent {
 /// A fallback component that will match one *or more* dynamic segments.
 ///
 /// Catch all components are represented as `**`.
-class CatchAllPathComponent implements PathComponent {
+class CatchallPathComponent implements PathComponent {
   /// Creates a new catch all path component.
-  const CatchAllPathComponent();
+  const CatchallPathComponent();
 
   @override
   String get description => '**';
 }
 
-extension ConvertStringToPathComponent on String {
-  String get _withoutTrailingSlash =>
-      endsWith('/') ? substring(0, length - 1) : this;
+extension PathComponentStringHelpers on String {
+  /// Converts a string into a [PathComponent].
+  PathComponent get pathComponent => PathComponent(this);
 
-  String get _withoutLeadingSlash =>
-      startsWith('/') ? substring(1, length) : this;
-
-  /// Converts a string into [Iterable<PathComponent>].
-  Iterable<PathComponent> toPathComponents() {
-    return splitWithSlash().map(PathComponent.new);
-  }
+  /// Converts a string into a iterable of [PathComponent].
+  Iterable<PathComponent> get pathComponents =>
+      splitWithSlash().map(PathComponent.new);
 
   /// Converts a string into [Iterable<String>].
   Iterable<String> splitWithSlash() {
-    return _withoutLeadingSlash._withoutTrailingSlash.split('/');
+    return withoutLeadingSlash.withoutTrailingSlash.split('/');
   }
 }
 
-extension ConvertPathComponentsToString on Iterable<PathComponent> {
-  /// Converts a [Iterable<PathComponent>] into a [String].
-  String toPathComponentsString() {
-    return map((component) => component.description).join('/');
-  }
+extension on String {
+  String get withoutTrailingSlash =>
+      endsWith('/') ? substring(0, length - 1) : this;
+
+  String get withoutLeadingSlash =>
+      startsWith('/') ? substring(1, length) : this;
+}
+
+extension PathComponentIterableHelper on Iterable<PathComponent> {
+  /// Converts an iterable of [PathComponent] into a [String].
+  String get path => map((component) => component.description).join('/');
+}
+
+extension PathComponentsCastHelper on Iterable<String> {
+  /// Casts an iterable of [PathComponent] into a [Iterable<PathComponent>].
+  Iterable<PathComponent> get pathComponents => map(PathComponent.new);
 }

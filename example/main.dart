@@ -7,8 +7,8 @@ void main() {
   router.logger.onRecord.listen(print);
 
   // Register a route with a constant path component.
-  router.register(0, '/users/:id/friends/:friend_id'.toPathComponents());
-  router.register(1, '/users/:id/friends/:friend_id'.toPathComponents());
+  router.register(0, '/users/:id/friends/:friend_id'.pathComponents);
+  router.register(1, '/users/:id/friends/:friend_id'.pathComponents);
 
   final parameters = Parameters();
 
