@@ -35,7 +35,7 @@ flutter pub add routingkit
 
 ## Sponsor RoutingKit
 
-RoutingKit is an open source project based on the [MIT protocol](https://github.com/medz/routingkit?tab=MIT-1-ov-file). If your Router implementation uses RoutingKit, or you find my work helpful to you, please sponsor me on [GitHub Sponsors](https://github.com/sponsors/medz). Your support is my biggest motivation.
+RoutingKit is an open source project based on the [MIT license](https://github.com/medz/routingkit?tab=MIT-1-ov-file). If your Router implementation uses RoutingKit, or you find my work helpful to you, please sponsor me on [GitHub Sponsors](https://github.com/sponsors/medz). Your support is my biggest motivation.
 
 ## Getting Started
 
