@@ -2,6 +2,8 @@ import 'package:test/test.dart';
 import 'package:routingkit/src/_internal/node.dart';
 import 'package:routingkit/routingkit.dart';
 
+final int x = 1, y = 2, z = 3;
+
 void main() {
   test('Base routing', () {
     final router = TrieRouter()
@@ -213,18 +215,18 @@ void main() {
 
   // Router description
   test('Router description', () {
-    final constA = PathComponent.constant('a');
-    final constOne = PathComponent.constant('1');
-    final paramOne = PathComponent.parameter('1');
-    final anything = PathComponent.anything;
-    final catchAll = PathComponent.catchAll;
+    final PathComponent constA = PathComponent.constant('a'),
+        constOne = PathComponent.constant('1'),
+        paramOne = PathComponent.parameter('1'),
+        anything = PathComponent.anything,
+        catchAll = PathComponent.catchAll;
 
-    final router = TrieRouter();
-    router.register(0, [constA, anything]);
-    router.register(1, [constA, constOne, catchAll]);
-    router.register(1, [constA, constOne, anything]);
-    router.register(1, [anything, constA, paramOne]);
-    router.register(1, [catchAll]);
+    final router = TrieRouter()
+      ..register(0, [constA, anything])
+      ..register(1, [constA, constOne, catchAll])
+      ..register(1, [constA, constOne, anything])
+      ..register(1, [anything, constA, paramOne])
+      ..register(1, [catchAll]);
 
     final String description = '''
 $rightArrow ${constA.description}
