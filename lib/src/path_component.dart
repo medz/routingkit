@@ -33,6 +33,9 @@ final class ConstantPathComponent implements PathComponent {
 
   @override
   String get description => constant;
+
+  @override
+  String toString() => description;
 }
 
 /// A [dynamic] parameter path component.
@@ -49,6 +52,9 @@ final class ParameterPathComponent implements PathComponent {
 
   @override
   String get description => ':$identifier';
+
+  @override
+  String toString() => description;
 }
 
 /// A dynamic parameter component with discarded value.
@@ -60,6 +66,9 @@ final class AnythingPathComponent implements PathComponent {
 
   @override
   String get description => '*';
+
+  @override
+  String toString() => description;
 }
 
 /// A fallback component that will match one *or more* dynamic segments.
@@ -71,6 +80,9 @@ class CatchallPathComponent implements PathComponent {
 
   @override
   String get description => '**';
+
+  @override
+  String toString() => description;
 }
 
 extension PathComponentStringHelpers on String {

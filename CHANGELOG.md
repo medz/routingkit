@@ -1,3 +1,7 @@
+## 0.1.1
+
+- Fixed path component `toString` method to return correct value
+
 ## 0.1.0
 
 - Fixed `CatchAll` to `Catchall` correctly
