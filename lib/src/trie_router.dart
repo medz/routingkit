@@ -105,7 +105,7 @@ class TrieRouter<T> implements Router<T> {
     // If the node already has a value, it means that the route is duplicated.
     if (current.value != null) {
       logger.info(
-          'Overriding duplicate route for ${path.elementAt(0).description} ${path.skip(1).path}');
+          'Overriding duplicate route for ${path.elementAt(0).description} ${path.skip(1).description}');
     }
 
     current.value = value;

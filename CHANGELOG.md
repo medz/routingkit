@@ -1,3 +1,7 @@
+## 0.1.2
+
+- Rename `Iterable` extension `path` to `description`.
+
 ## 0.1.1
 
 - Fixed path component `toString` method to return correct value

@@ -109,7 +109,7 @@ extension on String {
 
 extension PathComponentIterableHelper on Iterable<PathComponent> {
   /// Converts an iterable of [PathComponent] into a [String].
-  String get path => map((component) => component.description).join('/');
+  String get description => map((component) => component.description).join('/');
 }
 
 extension PathComponentsCastHelper on Iterable<String> {
