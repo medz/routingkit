@@ -2,7 +2,7 @@ import 'package:logging/logging.dart';
 
 import 'configuration_options.dart';
 import '_internal/node.dart';
-import 'parameters.dart';
+import 'params.dart';
 import 'segment.dart';
 import 'router.dart';
 
@@ -29,7 +29,7 @@ class TrieRouter<T> implements Router<T> {
   }
 
   @override
-  T? lookup(Iterable<String> path, Parameters parameters) {
+  T? lookup(Iterable<String> path, Params parameters) {
     Node<T> currentNode = _root;
     (Node<T>, Iterable<String>)? currentCatchAll;
 
@@ -54,7 +54,7 @@ class TrieRouter<T> implements Router<T> {
       if (wildcard != null) {
         // If the wildcard is a parameter, add it to the parameters.
         if (wildcard.parameter != null) {
-          parameters.set(wildcard.parameter!, segment);
+          parameters.append(wildcard.parameter!, segment);
         }
 
         currentNode = wildcard.node;
@@ -64,7 +64,7 @@ class TrieRouter<T> implements Router<T> {
       // No matches, return catch all if we have one
       if (currentCatchAll case (Node<T> catchAll, Iterable<String> values)) {
         // fallback to catchall output if we have one
-        parameters.setCatchall(values);
+        parameters.catchall = values;
 
         return catchAll.value;
       }
@@ -76,7 +76,7 @@ class TrieRouter<T> implements Router<T> {
     if (currentNode.value != null) return currentNode.value;
     if (currentCatchAll case (Node<T> catchAll, Iterable<String> values)) {
       // fallback to catchall output if we have one
-      parameters.setCatchall(values);
+      parameters.catchall = values;
 
       return catchAll.value;
     }

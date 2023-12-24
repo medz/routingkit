@@ -1,4 +1,4 @@
-import 'parameters.dart';
+import 'params.dart';
 import 'segment.dart';
 
 /// An object that can quickly lookup previously registered routes.
@@ -19,5 +19,5 @@ abstract interface class Router<T> {
   /// ## Parameters
   /// - [segments]: The path to lookup.
   /// - [parameters]: The parameters to use when matching.
-  T? lookup(Iterable<String> segments, Parameters parameters);
+  T? lookup(Iterable<String> segments, Params params);
 }
