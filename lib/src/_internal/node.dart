@@ -1,5 +1,5 @@
 import '../configuration_options.dart';
-import '../path_component.dart';
+import '../segment.dart';
 
 const space = '    ';
 const rightArrow = '→';
@@ -53,13 +53,12 @@ class Node<T> {
 
   /// Returns the child router node for the supplied [PathComponent] or
   /// creates a new segment onto the tree if necessary.
-  Node<T> childOrCreate(PathComponent component, ConfigurationOptions options) {
-    return switch (component) {
-      ConstantPathComponent(constant: final value) =>
-        _createConstantChild(value, options),
-      ParameterPathComponent(identifier: final value) => _createWildcard(value),
-      CatchallPathComponent() => _createCatchall(),
-      AnythingPathComponent() => _createAnything(),
+  Node<T> childOrCreate(Segment segment, ConfigurationOptions options) {
+    return switch (segment) {
+      ConstSegment(value: final value) => _createConstantChild(value, options),
+      ParamSegment(name: final value) => _createWildcard(value),
+      CatchallSegment() => _createCatchall(),
+      AnySegment() => _createAnything(),
     };
   }
 

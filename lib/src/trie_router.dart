@@ -3,7 +3,7 @@ import 'package:logging/logging.dart';
 import 'configuration_options.dart';
 import '_internal/node.dart';
 import 'parameters.dart';
-import 'path_component.dart';
+import 'segment.dart';
 import 'router.dart';
 
 /// Generic [TrieRouter] built using the `trie` tree algorithm.
@@ -85,18 +85,18 @@ class TrieRouter<T> implements Router<T> {
   }
 
   @override
-  void register(T value, Iterable<PathComponent> path) {
-    assert(path.isNotEmpty, 'Path cannot be empty');
+  void register(T value, Iterable<Segment> segments) {
+    assert(segments.isNotEmpty, 'Segments cannot be empty');
 
     // Start at the root of the trie tree
     Node current = _root;
 
     // for each dynamic path in the route get the appropriate node,
     // creating it if it doesn't exist.
-    for (final (index, component) in path.indexed) {
-      if (component is CatchallPathComponent && index < path.length - 1) {
+    for (final (index, component) in segments.indexed) {
+      if (component is CatchallSegment && index < segments.length - 1) {
         throw ArgumentError.value(
-            component, 'path', 'Catchall must be the last path component');
+            component, 'path', 'Catchall must be the last segment');
       }
 
       current = current.childOrCreate(component, options);
@@ -105,7 +105,7 @@ class TrieRouter<T> implements Router<T> {
     // If the node already has a value, it means that the route is duplicated.
     if (current.value != null) {
       logger.info(
-          'Overriding duplicate route for ${path.elementAt(0).description} ${path.skip(1).description}');
+          'Overriding duplicate route for ${segments.elementAt(0)} ${segments.skip(1)}');
     }
 
     current.value = value;
