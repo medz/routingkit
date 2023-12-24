@@ -10,19 +10,19 @@ class RoutingMatchFirstBenchmark extends BenchmarkBase {
   String get name => '(caseSensitive: $caseSensitive) ${super.name}';
 
   late final TrieRouter router;
-  late final Parameters parameters;
+  late final Params parameters;
 
   @override
   void setup() {
     router = TrieRouter<String>(
-      options: ConfigurationOptions(caseSensitive: caseSensitive),
+      caseSensitive: caseSensitive,
     );
-    parameters = Parameters();
+    parameters = Params();
 
     for (final letter in const ['a', 'b', 'c', 'd', 'e', 'f', 'g']) {
       router.register(
         letter,
-        [PathComponent(letter), PathComponent.parameter('${letter}_id')],
+        [Segment(letter), Segment.param('${letter}_id')],
       );
     }
   }
@@ -42,19 +42,17 @@ class RoutingMatchLastBenchmark extends BenchmarkBase {
   String get name => '(caseSensitive: $caseSensitive) ${super.name}';
 
   late final TrieRouter router;
-  late final Parameters parameters;
+  late final Params parameters;
 
   @override
   void setup() {
-    router = TrieRouter<String>(
-      options: ConfigurationOptions(caseSensitive: caseSensitive),
-    );
-    parameters = Parameters();
+    router = TrieRouter<String>(caseSensitive: caseSensitive);
+    parameters = Params();
 
     for (final letter in const ['a', 'b', 'c', 'd', 'e', 'f', 'g']) {
       router.register(
         letter,
-        [PathComponent.parameter('${letter}_id'), PathComponent(letter)],
+        [Segment.param('${letter}_id'), Segment.constant(letter)],
       );
     }
   }
@@ -75,17 +73,15 @@ class RoutingMinmumMatchBenchmark extends BenchmarkBase {
   String get name => '(caseSensitive: $caseSensitive) ${super.name}';
 
   late final TrieRouter router;
-  late final Parameters parameters;
+  late final Params parameters;
 
   @override
   void setup() {
-    router = TrieRouter<String>(
-      options: ConfigurationOptions(caseSensitive: caseSensitive),
-    );
+    router = TrieRouter<String>(caseSensitive: caseSensitive);
 
-    router.register('a', [PathComponent.constant('a')]);
+    router.register('a', [Segment.constant('a')]);
 
-    parameters = Parameters();
+    parameters = Params();
   }
 
   @override
@@ -104,16 +100,14 @@ class RouterMatchEarlyFailBenchmark extends BenchmarkBase {
   String get name => '(caseSensitive: $caseSensitive) ${super.name}';
 
   late final TrieRouter router;
-  late final Parameters parameters;
+  late final Params parameters;
 
   @override
   void setup() {
-    parameters = Parameters();
-    router = TrieRouter<String>(
-      options: ConfigurationOptions(caseSensitive: caseSensitive),
-    );
+    parameters = Params();
+    router = TrieRouter<String>(caseSensitive: caseSensitive);
 
-    router.register('a', [PathComponent.constant('a')]);
+    router.register('a', [Segment.constant('a')]);
   }
 
   @override

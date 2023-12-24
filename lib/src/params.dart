@@ -31,6 +31,9 @@ class Params extends Iterable<(String name, String value)> {
   /// Sets the catchall segment matched values.
   set catchall(Iterable<String> values) =>
       _catchall = _Catchall(values, encoded: true);
+
+  /// Returns the param names.
+  Iterable<String> get keys => map((e) => e.$1);
 }
 
 class _Catchall {

@@ -45,3 +45,12 @@ class CatchallSegment implements Segment {
   @override
   String toString() => '**';
 }
+
+extension String$Segments on String {
+  /// As a defined route path to segments.
+  Iterable<Segment> get asSegments => asPaths.map(Segment.new);
+
+  /// As a path string with trimmed segments.
+  Iterable<String> get asPaths =>
+      split('/').map((e) => e.trim()).where((e) => e.isNotEmpty);
+}

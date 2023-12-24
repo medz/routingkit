@@ -1,4 +1,3 @@
-import '../configuration_options.dart';
 import '../segment.dart';
 
 const space = '    ';
@@ -53,9 +52,10 @@ class Node<T> {
 
   /// Returns the child router node for the supplied [PathComponent] or
   /// creates a new segment onto the tree if necessary.
-  Node<T> childOrCreate(Segment segment, ConfigurationOptions options) {
+  Node<T> childOrCreate(Segment segment, bool caseSensitive) {
     return switch (segment) {
-      ConstSegment(value: final value) => _createConstantChild(value, options),
+      ConstSegment(value: final value) =>
+        _createConstantChild(value, caseSensitive),
       ParamSegment(name: final value) => _createWildcard(value),
       CatchallSegment() => _createCatchall(),
       AnySegment() => _createAnything(),
@@ -135,8 +135,8 @@ extension<T> on Node<T> {
   }
 
   /// Creates a new constant child node.
-  Node<T> _createConstantChild(String constant, ConfigurationOptions options) {
-    final value = options.caseSensitive ? constant : constant.toLowerCase();
+  Node<T> _createConstantChild(String constant, bool caseSensitive) {
+    final value = caseSensitive ? constant : constant.toLowerCase();
 
     return constants.putIfAbsent(value, () => Node());
   }

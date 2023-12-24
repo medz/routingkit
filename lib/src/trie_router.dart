@@ -1,6 +1,5 @@
 import 'package:logging/logging.dart';
 
-import 'configuration_options.dart';
 import '_internal/node.dart';
 import 'params.dart';
 import 'segment.dart';
@@ -11,38 +10,35 @@ import 'router.dart';
 /// - Use [register] to register routes into the router.
 /// - Use [lookup] to then lookup a matching route.
 class TrieRouter<T> implements Router<T> {
-  /// The trie router configuration options.
-  final ConfigurationOptions options;
+  /// Whether to use case sensitive matching
+  final bool caseSensitive;
 
   /// The trie router logger.
-  late final Logger logger;
+  final Logger logger;
 
   /// The root node of the trie tree.
   final Node<T> _root = Node();
 
   /// Create a new trie router.
   TrieRouter({
-    this.options = const ConfigurationOptions(),
+    this.caseSensitive = true,
     Logger? logger,
-  }) {
-    this.logger = logger ?? Logger('trie-router');
-  }
+  }) : logger = logger ?? Logger('Routing Kit');
 
   @override
-  T? lookup(Iterable<String> path, Params parameters) {
+  T? lookup(Iterable<String> segments, Params params) {
     Node<T> currentNode = _root;
-    (Node<T>, Iterable<String>)? currentCatchAll;
+    (Node<T>, Iterable<String>)? currentCatchall;
 
     // traverse the string path supplied
-    for (final (index, segment) in path.indexed) {
+    for (final (index, segment) in segments.indexed) {
       // Store catch all if it exists
       if (currentNode.catchAll != null) {
-        currentCatchAll = (currentNode.catchAll!, path.skip(index));
+        currentCatchall = (currentNode.catchAll!, segments.skip(index));
       }
 
       // Match the segment of constants.
-      final constant = currentNode
-          .constants[options.caseSensitive ? segment : segment.toLowerCase()];
+      final constant = currentNode.constants[segment.toCase(caseSensitive)];
       if (constant != null) {
         currentNode = constant;
         continue;
@@ -54,7 +50,7 @@ class TrieRouter<T> implements Router<T> {
       if (wildcard != null) {
         // If the wildcard is a parameter, add it to the parameters.
         if (wildcard.parameter != null) {
-          parameters.append(wildcard.parameter!, segment);
+          params.append(wildcard.parameter!, segment);
         }
 
         currentNode = wildcard.node;
@@ -62,11 +58,11 @@ class TrieRouter<T> implements Router<T> {
       }
 
       // No matches, return catch all if we have one
-      if (currentCatchAll case (Node<T> catchAll, Iterable<String> values)) {
+      if (currentCatchall case (Node<T> catchall, Iterable<String> values)) {
         // fallback to catchall output if we have one
-        parameters.catchall = values;
+        params.catchall = values;
 
-        return catchAll.value;
+        return catchall.value;
       }
 
       // No matches, return null
@@ -74,11 +70,11 @@ class TrieRouter<T> implements Router<T> {
     }
 
     if (currentNode.value != null) return currentNode.value;
-    if (currentCatchAll case (Node<T> catchAll, Iterable<String> values)) {
+    if (currentCatchall case (Node<T> catchall, Iterable<String> values)) {
       // fallback to catchall output if we have one
-      parameters.catchall = values;
+      params.catchall = values;
 
-      return catchAll.value;
+      return catchall.value;
     }
 
     return null;
@@ -99,13 +95,12 @@ class TrieRouter<T> implements Router<T> {
             component, 'path', 'Catchall must be the last segment');
       }
 
-      current = current.childOrCreate(component, options);
+      current = current.childOrCreate(component, caseSensitive);
     }
 
     // If the node already has a value, it means that the route is duplicated.
     if (current.value != null) {
-      logger.info(
-          'Overriding duplicate route for ${segments.elementAt(0)} ${segments.skip(1)}');
+      logger.info('Overriding duplicate route for $segments');
     }
 
     current.value = value;
@@ -113,4 +108,8 @@ class TrieRouter<T> implements Router<T> {
 
   /// Returns the node description.
   String get description => _root.description;
+}
+
+extension on String {
+  String toCase(bool caseSensitive) => caseSensitive ? this : toLowerCase();
 }
