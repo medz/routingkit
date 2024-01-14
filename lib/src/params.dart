@@ -7,11 +7,12 @@ class Params extends Iterable<(String name, String value)> {
   Iterator<(String, String)> get iterator => _storage.iterator;
 
   /// Returns a first value for the given [name].
-  String? get(name) => firstWhereNull((element) => element.$1 == name)?.$2;
+  String? get(name) =>
+      firstWhereNull((element) => element.$1 == name)?.$2.tryDecodeComponent();
 
   /// Returns all values for the given [name].
-  Iterable<String> getAll(name) =>
-      where((element) => element.$1 == name).map((e) => e.$2);
+  Iterable<String> getAll(name) => where((element) => element.$1 == name)
+      .map((e) => e.$2.tryDecodeComponent());
 
   /// Appends a new parameter value.
   void append(String name, String value) => _storage.add((name, value));

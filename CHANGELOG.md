@@ -1,3 +1,7 @@
+## 0.2.0
+
+BREAKING CHANGE: Refactor all
+
 ## 0.1.2
 
 - Rename `Iterable` extension `path` to `description`.

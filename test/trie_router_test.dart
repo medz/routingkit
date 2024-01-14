@@ -7,27 +7,25 @@ final int x = 1, y = 2, z = 3;
 void main() {
   test('Base routing', () {
     final router = TrieRouter()
-      ..register(0, [PathComponent('users'), PathComponent(':name')]);
-    final parameters = Parameters();
+      ..register(0, [Segment('users'), Segment(':name')]);
+    final parameters = Params();
 
     expect(router.lookup(['users', 'Seven'], parameters), equals(0));
     expect(parameters.get('name'), equals('Seven'));
   });
 
   test('Case ensitive routing', () {
-    final router =
-        TrieRouter(options: ConfigurationOptions(caseSensitive: true))
-          ..register(0, [PathComponent('FoO'), PathComponent('bAr')]);
-    final parameters = Parameters();
+    final router = TrieRouter(caseSensitive: true)
+      ..register(0, [Segment('FoO'), Segment('bAr')]);
+    final parameters = Params();
 
     expect(router.lookup(['FoO', 'bAr'], parameters), equals(0));
   });
 
   test('Case insensitive routing', () {
-    final router =
-        TrieRouter(options: ConfigurationOptions(caseSensitive: false))
-          ..register(0, [PathComponent('FoO'), PathComponent('bAr')]);
-    final parameters = Parameters();
+    final router = TrieRouter(caseSensitive: false)
+      ..register(0, [Segment('FoO'), Segment('bAr')]);
+    final parameters = Params();
 
     expect(router.lookup(['FOO', 'bar'], parameters), equals(0));
   });
@@ -35,35 +33,19 @@ void main() {
   // Any routing
   test('Any routing', () {
     final router = TrieRouter()
-      ..register(0, [PathComponent('a'), PathComponent.anything])
-      ..register(1, [
-        PathComponent('b'),
-        PathComponent.parameter('1'),
-        PathComponent.anything
-      ])
-      ..register(2, [
-        PathComponent('c'),
-        PathComponent.parameter('1'),
-        PathComponent.parameter('2'),
-        PathComponent.anything
-      ])
+      ..register(0, [Segment('a'), Segment.any()])
+      ..register(1, [Segment('b'), Segment.param('1'), Segment.any()])
+      ..register(2,
+          [Segment('c'), Segment.param('1'), Segment.param('2'), Segment.any()])
       ..register(3, [
-        PathComponent('d'),
-        PathComponent.parameter('1'),
-        PathComponent.parameter('2'),
+        Segment('d'),
+        Segment.param('1'),
+        Segment.param('2'),
       ])
-      ..register(4, [
-        PathComponent('e'),
-        PathComponent.parameter('1'),
-        PathComponent.catchall
-      ])
-      ..register(5, [
-        PathComponent.anything,
-        PathComponent.constant('e'),
-        PathComponent.parameter('1')
-      ]);
+      ..register(4, [Segment('e'), Segment.param('1'), Segment.catchall()])
+      ..register(5, [Segment.any(), Segment.constant('e'), Segment.param('1')]);
 
-    final parameters = Parameters();
+    final parameters = Params();
 
     // a
     expect(router.lookup(['a'], parameters), isNull);
@@ -98,29 +80,23 @@ void main() {
   // Wildcard routing
   test('Wildcard routing', () {
     final router1 = TrieRouter()
-      ..register(0, [
-        PathComponent.constant('a'),
-        PathComponent.parameter('1'),
-        PathComponent.constant('a')
-      ])
+      ..register(
+          0, [Segment.constant('a'), Segment.param('1'), Segment.constant('a')])
       ..register(1, [
-        PathComponent.constant('a'),
-        PathComponent.anything,
-        PathComponent.constant('b'),
+        Segment.constant('a'),
+        Segment.any(),
+        Segment.constant('b'),
       ]);
     final router2 = TrieRouter()
-      ..register(0, [
-        PathComponent.constant('a'),
-        PathComponent.anything,
-        PathComponent.constant('a')
-      ])
+      ..register(
+          0, [Segment.constant('a'), Segment.any(), Segment.constant('a')])
       ..register(1, [
-        PathComponent.constant('a'),
-        PathComponent.anything,
-        PathComponent.constant('b'),
+        Segment.constant('a'),
+        Segment.any(),
+        Segment.constant('b'),
       ]);
-    final parameters1 = Parameters();
-    final parameters2 = Parameters();
+    final parameters1 = Params();
+    final parameters2 = Params();
     final path = ['a', '1', 'b'];
 
     expect(router1.lookup(path, parameters1), equals(1));
@@ -129,13 +105,11 @@ void main() {
 
   // Router suffixes
   test('Router suffixes', () {
-    final router = TrieRouter(
-      options: ConfigurationOptions(caseSensitive: true),
-    );
-    router.register(0, [PathComponent('a')]);
-    router.register(1, [PathComponent('aa')]);
+    final router = TrieRouter(caseSensitive: true);
+    router.register(0, [Segment('a')]);
+    router.register(1, [Segment('aa')]);
 
-    final parameters = Parameters();
+    final parameters = Params();
 
     expect(router.lookup(['a'], parameters), equals(0));
     expect(router.lookup(['aa'], parameters), equals(1));
@@ -144,8 +118,8 @@ void main() {
   // Parameter Percent Decoding
   test('Parameter Percent Decoding', () {
     final router = TrieRouter()
-      ..register(0, [PathComponent('users'), PathComponent(':name')]);
-    final parameters = Parameters();
+      ..register(0, [Segment('users'), Segment(':name')]);
+    final parameters = Params();
 
     expect(router.lookup(['users', 'Seven%20Du'], parameters), equals(0));
     expect(parameters.get('name'), equals('Seven Du'));
@@ -154,19 +128,16 @@ void main() {
   // Catch all nesting
   test('Catch all nesting', () {
     final router = TrieRouter<String>()
-      ..register('/**', [PathComponent.catchall])
-      ..register('/a/**', [PathComponent.constant('a'), PathComponent.catchall])
-      ..register('/a/b/**', [
-        PathComponent.constant('a'),
-        PathComponent.constant('b'),
-        PathComponent.catchall
-      ])
+      ..register('/**', [Segment.catchall()])
+      ..register('/a/**', [Segment.constant('a'), Segment.catchall()])
+      ..register('/a/b/**',
+          [Segment.constant('a'), Segment.constant('b'), Segment.catchall()])
       ..register('/a/b', [
-        PathComponent.constant('a'),
-        PathComponent.constant('b'),
+        Segment.constant('a'),
+        Segment.constant('b'),
       ]);
 
-    final parameters = Parameters();
+    final parameters = Params();
 
     expect(router.lookup(['a'], parameters), equals('/**'));
     expect(router.lookup(['a', 'b'], parameters), equals('/a/b'));
@@ -179,14 +150,11 @@ void main() {
   // Catch all precedence
   test('Catch all precedence', () {
     final router = TrieRouter<String>();
-    router.register(
-        'a', [PathComponent.constant('v1'), PathComponent.constant('test')]);
-    router
-        .register('b', [PathComponent.constant('v1'), PathComponent.catchall]);
-    router
-        .register('c', [PathComponent.constant('v1'), PathComponent.anything]);
+    router.register('a', [Segment.constant('v1'), Segment.constant('test')]);
+    router.register('b', [Segment.constant('v1'), Segment.catchall()]);
+    router.register('c', [Segment.constant('v1'), Segment.any()]);
 
-    final parameters = Parameters();
+    final parameters = Params();
 
     expect(router.lookup(['v1', 'test'], parameters), equals('a'));
     expect(router.lookup(['v1', 'test', 'foo'], parameters), equals('b'));
@@ -196,30 +164,29 @@ void main() {
   // Catch all value
   test('Catch all value', () {
     final router = TrieRouter();
-    router.register(0,
-        [PathComponent('users'), PathComponent(':user'), PathComponent('**')]);
-    router.register(1, [PathComponent('users'), PathComponent('**')]);
+    router.register(0, [Segment('users'), Segment(':user'), Segment('**')]);
+    router.register(1, [Segment('users'), Segment('**')]);
 
-    final parameters = Parameters();
+    final parameters = Params();
 
     expect(router.lookup(['users'], parameters), isNull);
-    expect(parameters.getCatchall(), isEmpty);
+    expect(parameters.catchall, isEmpty);
 
     expect(router.lookup(['users', 'foo'], parameters), equals(1));
-    expect(parameters.getCatchall(), ['foo']);
+    expect(parameters.catchall, ['foo']);
 
     expect(
         router.lookup(['users', 'seven', 'posts', '2'], parameters), equals(0));
-    expect(parameters.getCatchall(), ['posts', '2']);
+    expect(parameters.catchall, ['posts', '2']);
   });
 
   // Router description
   test('Router description', () {
-    final PathComponent constA = PathComponent.constant('a'),
-        constOne = PathComponent.constant('1'),
-        paramOne = PathComponent.parameter('1'),
-        anything = PathComponent.anything,
-        catchall = PathComponent.catchall;
+    final Segment constA = Segment.constant('a'),
+        constOne = Segment.constant('1'),
+        paramOne = Segment.param('1'),
+        anything = Segment.any(),
+        catchall = Segment.catchall();
 
     final router = TrieRouter()
       ..register(0, [constA, anything])
@@ -229,15 +196,15 @@ void main() {
       ..register(1, [catchall]);
 
     final String description = '''
-$rightArrow ${constA.description}
-$space$rightArrow ${constOne.description}
-$space$space$rightArrow ${anything.description}
-$space$space$rightArrow ${catchall.description}
-$space$rightArrow ${anything.description}
-$rightArrow ${anything.description}
-$space$rightArrow ${constA.description}
-$space$space$rightArrow ${paramOne.description}
-$rightArrow ${catchall.description}''';
+$rightArrow ${constA.toString()}
+$space$rightArrow ${constOne.toString()}
+$space$space$rightArrow ${anything.toString()}
+$space$space$rightArrow ${catchall.toString()}
+$space$rightArrow ${anything.toString()}
+$rightArrow ${anything.toString()}
+$space$rightArrow ${constA.toString()}
+$space$space$rightArrow ${paramOne.toString()}
+$rightArrow ${catchall.toString()}''';
 
     expect(router.description, equals(description));
   });
