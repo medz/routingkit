@@ -22,7 +22,7 @@ Add the dependency to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  routingkit: latest
+  routingkit: 0.2.0
 ```
 
 Or install it with `pub`:
@@ -46,26 +46,26 @@ import 'package:routingkit/routingkit.dart';
 
 final router = TrieRouter();
 
-router.register(0, '/users/:user_id'.pathComponents);
-router.register(1, '/users/:user_id/posts'.pathComponents);
-router.register(2, '/users/:user_id/posts/:post_id'.pathComponents);
+router.register(0, '/users/:user_id'.asSegments);
+router.register(1, '/users/:user_id/posts'.asSegments);
+router.register(2, '/users/:user_id/posts/:post_id'.asSegments);
 
 void main() {
 
-  final zeroParams = Parameters();
-  final zeroResult = router.lookup('/users/1'.splitWithSlash(), zeroParams);
+  final zeroParams = Params();
+  final zeroResult = router.lookup('/users/1'.asPaths, zeroParams);
   print(zeroResult); // 0
-  print(zeroParams.allNames); // {user_id}
+  print(zeroParams.keys); // {user_id}
   print(zoroParams.get('user_id')); // 1
 
-  final oneParams = Parameters();
-  final oneResult = router.lookup('/users/1/posts'.splitWithSlash(), oneParams);
+  final oneParams = Params();
+  final oneResult = router.lookup('/users/1/posts'.asPaths, oneParams);
   print(oneResult); // 1
 
-  final twoParams = Parameters();
-  final twoResult = router.lookup('/users/1/posts/2'.splitWithSlash(), twoParams);
+  final twoParams = Params();
+  final twoResult = router.lookup('/users/1/posts/2'.asPaths, twoParams);
   print(twoResult); // 2
-  print(twoParams.allNames); // {user_id, post_id}
+  print(twoParams.keys); // {user_id, post_id}
   print(twoParams.get('user_id')); // 1
   print(twoParams.get('post_id')); // 2
 }
@@ -73,113 +73,113 @@ void main() {
 
 Through the above example, you can see that the use of RoutingKit is very simple, just create a `TrieRouter` instance, then use the `register` method to register the route, and finally use the `lookup` method to route matching.
 
-The `Parameters` class is a parameter container that will save the matched parameters internally after the route is successfully matched. For specific usage, please refer to [Parameters](#parameters).
+The `Parameters` class is a parameter container that will save the matched parameters internally after the route is successfully matched. For specific usage, please refer to [Params](#parameters).
 
-## Path components
+## Path Segments
 
-`PathComponent` is a core concept in RoutingKit. It is an abstract class with four subclasses:
+`Segment` is a core concept in RoutingKit. It is an abstract class with four subclasses:
 
-- `ConstantPathComponent`: Constant path component, for example `/users`.
-- `ParameterPathComponent`: Parameter path component, for example `/users/:user_id`.
-- `AnythingPathComponent`: Wildcard path component, for example `/users/*`.
-- `CatchallPathComponent`: Catchall path component, for example `/users/**`.
+- `ConstSegment`: Constant path component, for example `/users`.
+- `ParamSegment`: Parameter path component, for example `/users/:user_id`.
+- `AnySegment`: Wildcard path component, for example `/users/*`.
+- `CatchallSegment`: Catchall path component, for example `/users/**`.
 
 Of course, you don’t have to care about these classes, because RoutingKit has provided you with some convenient methods, for example:
 
 ```dart
-'/users'.pathComponents; // [ConstantPathComponent('users')]
-'/users/:user_id'.pathComponents; // [ConstantPathComponent('users'), ParameterPathComponent('user_id')]
-'users'.pathComponent // ConstantPathComponent('users')
-'/users/:id/*'.pathComponents; // [ConstantPathComponent('users'), ParameterPathComponent('id'), AnythingPathComponent()]
-'/users/**'.pathComponents; // [ConstantPathComponent('users'), CatchallPathComponent()]
+'/users'.asSegments; // [ConstSegment('users')]
+'/users/:user_id'.asSegments; // [ConstSegment('users'), ParamSegment('user_id')]
+'users'.asSegments // ConstSegment('users')
+'/users/:id/*'.asSegments; // [ConstSegment('users'), ParamSegment('id'), AnySegment()]
+'/users/**'.asSegments; // [ConstSegment('users'), CatchallSegment()]
 ```
 
-You can also directly pass a string to the default constructor factory function of `PathComponent`, for example:
+You can also directly pass a string to the default constructor factory function of `Segment`, for example:
 
 ```dart
-PathComponent('users'); // ConstantPathComponent('users')
-PathComponent(':user_id'); // ParameterPathComponent('user_id')
-PathComponent('*'); // AnythingPathComponent()
-PathComponent('**'); // CatchallPathComponent()
+Segment('users'); // ConstSegment('users')
+Segment(':user_id'); // ParamSegment('user_id')
+Segment('*'); // AnySegment()
+Segment('**'); // CatchallSegment()
 ```
 
-At the same time, `PathComponent` also provides literal constructors and static properties:
+At the same time, `Segment` also provides literal constructors and static properties:
 
 ```dart
-PathComponent.constant('users'); // ConstantPathComponent('users')
-PathComponent.parameter('user_id'); // ParameterPathComponent('user_id')
-PathComponent.anything; // AnythingPathComponent()
-PathComponent.catchall; // CatchallPathComponent()
+Segment.constant('users'); // ConstSegment('users')
+Segment.parma('user_id'); // ParamSegment('user_id')
+Segment.any(); // AnySegment()
+Segment.catchall(); // CatchallSegment()
 ```
 
-`PathComponent` has only one property `description`, which is a string used to describe the literal definition of the current path component, for example:
+`Segment` has only one property `description`, which is a string used to describe the literal definition of the current path component, for example:
 
 ```dart
-PathComponent.constant('users').description; // users
+Segment.constant('users').description; // users
 ```
 
-### ConstantPathComponent
+### ConstSegment
 
-The `ConstantPathComponent` is a constant path component, and its `constant` parameter is a constant string, for example:
+The `ConstSegment` is a constant path component, and its `constant` parameter is a constant string, for example:
 
 ```dart
-final component = PathComponent.constant('users');
+final component = Segment.constant('users');
 ```
 
-It returns a `component` that is a `ConstantPathComponent` instance that represents the constant string that must be matched in the path segment, for example:
+It returns a `component` that is a `ConstSegment` instance that represents the constant string that must be matched in the path segment, for example:
 
 ```dart
-router.register(0, '/users'.pathComponents);
+router.register(0, '/users'.asSegments);
 
-final params = Parameters();
-router.lookup('/users'.splitWithSlash(), params); // 0
-router.lookup('/posts'.splitWithSlash(), params); // null
+final params = Params();
+router.lookup('/users'.asPaths, params); // 0
+router.lookup('/posts'.asPaths, params); // null
 ```
 
-### ParameterPathComponent
+### ParamSegment
 
-The `ParameterPathComponent` is a parameter path component, and its `identifier` parameter is a string used to represent the name of the current parameter, for example:
+The `ParamSegment` is a parameter path component, and its `identifier` parameter is a string used to represent the name of the current parameter, for example:
 
 ```dart
-final component = PathComponent.parameter('user_id');
+final component = Segment.param('user_id');
 ```
 
-It returns a `component` that is a `ParameterPathComponent` instance that represents the parameter that must be matched in the path segment, for example:
+It returns a `component` that is a `ParamSegment` instance that represents the parameter that must be matched in the path segment, for example:
 
 ```dart
-router.register(0, '/users/:user_id'.pathComponents);
+router.register(0, '/users/:user_id'.asSegments);
 
-final params = Parameters();
+final params = Params();
 
-router.lookup('/users/1'.splitWithSlash(), params); // 0
-print(params.allNames); // {user_id}
+router.lookup('/users/1'.asPaths, params); // 0
+print(params.keys); // {user_id}
 print(params.get('user_id')); // 1
 ```
 
-### AnythingPathComponent
+### AnySegment
 
-The `AnythingPathComponent` is a path wildcard component that matches any string in the current path segment, for example:
+The `AnySegment` is a path wildcard component that matches any string in the current path segment, for example:
 
 ```dart
-router.register(0, '/users/:user_id/*'.pathComponents);
+router.register(0, '/users/:user_id/*'.asSegments);
 
-final params = Parameters();
+final params = Params();
 
-router.lookup('/users/1/posts'.splitWithSlash(), params); // 0
-print(params.getCatchall()); // (posts)
+router.lookup('/users/1/posts'.asPaths, params); // 0
+print(params.catchall); // (posts)
 ```
 
-### CatchallPathComponent
+### CatchallSegment
 
-The `CatchallPathComponent` is a path capture component that matches all path segments defined after it, for example:
+The `CatchallSegment` is a path capture component that matches all path segments defined after it, for example:
 
 ```dart
-router.register(0, '/users/**'.pathComponents);
+router.register(0, '/users/**'.asSegments);
 
-final params = Parameters();
+final params = Params();
 
-router.lookup('/users/1/posts'.splitWithSlash(), params); // 0
-print(params.getCatchall()); // (1, posts)
+router.lookup('/users/1/posts'.asPaths, params); // 0
+print(params.catchall); // (1, posts)
 ```
 
 ## Parameters
@@ -187,14 +187,14 @@ print(params.getCatchall()); // (1, posts)
 `Parameters` is a parameter container that will save the matched parameters internally after the route is successfully matched, for example:
 
 ```dart
-router.register(0, '/users/:user_id'.pathComponents);
+router.register(0, '/users/:user_id'.asSegments);
 
-final params = Parameters();
+final params = Params();
 
-router.lookup('/users/1'.splitWithSlash(), params); // 0
+router.lookup('/users/1'.asPaths, params); // 0
 
 print(params.get('user_id')); // 1
-print(params.allNames); // {user_id}
+print(params.keys); // {user_id}
 ```
 
 ### `get`
@@ -205,18 +205,13 @@ print(params.allNames); // {user_id}
 params.get('user_id'); // 1
 ```
 
-### `getAs`
+### `getAll`
 
-`Parameters` provides the `getAs` method to get the parameter with the specified name and convert it to the specified type, for example:
+`Parameters` provides the `getAll` method to get all parameters with the specified name, for example:
 
 ```dart
-params.getAs<int>('user_id', int.parse); // 1
+params.getAll('user_id'); // [1]
 ```
-
-It has two parameters:
-
-- `name`: Parameter name.
-- `cast`: Parameter conversion function.
 
 ### `set`
 
@@ -232,45 +227,45 @@ RoutingKit saves the matched parameters in `Parameters` through the `set` method
 params.set('other', '1');
 ```
 
-### `allNames`
+### `keys`
 
-The `Parameters` provides the `allNames` property to get all parameter names, for example:
+The `Parameters` provides the `keys` property to get all parameter names, for example:
 
 ```dart
-params.allNames; // {user_id, other}
+params.keys; // {user_id, other}
 ```
 
-### `getCatchall`
+### `catchall`
 
-`Parameters` provides the `getCatchall` method to get the captured `AnythingPathComponent` or `CatchallPathComponent` parameter, for example:
+`Parameters` provides the `catchall` field to get the captured `AnySegment` or `CatchallSegment` parameter, for example:
 
 ```dart
-router.register(0, '/users/:user_id/*'.pathComponents);
-router.register(1, '/posts/**'.pathComponents);
+router.register(0, '/users/:user_id/*'.asSegments);
+router.register(1, '/posts/**'.asSegments);
 
-final params = Parameters();
+final params = Params();
 
-router.lookup('/users/1/posts'.splitWithSlash(), params); // 0
-print(params.getCatchall()); // (posts)
+router.lookup('/users/1/posts'.asPaths, params); // 0
+print(params.catchall); // (posts)
 
-router.lookup('/posts/1/2/3'.splitWithSlash(), params); // 1
-print(params.getCatchall()); // (1, 2, 3)
+router.lookup('/posts/1/2/3'.asPaths, params); // 1
+print(params.catchall); // (1, 2, 3)
 ```
 
 ### `setCatchall`
 
-The `Parameters` provides the `setCatchall` method to set the captured `AnythingPathComponent` or `CatchallPathComponent` parameter. You can set the captured parameter by the `setCatchall` method, for example:
+The `Parameters` provides the `set catchall` method to set the captured `AnySegment` or `CatchallSegment` parameter. You can set the captured parameter by the `set catchall` method, for example:
 
 ```dart
-router.register(0, '/users/:user_id/*'.pathComponents);
+router.register(0, '/users/:user_id/*'.asSegments);
 
-final params = Parameters();
+final params = Params();
 
-router.lookup('/users/1/posts'.splitWithSlash(), params); // 0
-print(params.getCatchall()); // (posts)
+router.lookup('/users/1/posts'.asPaths, params); // 0
+print(params.catchall); // (posts)
 
-params.setCatchall(['1', '2', '3']);
-print(params.getCatchall()); // (1, 2, 3)
+params.catchall = ['1', '2', '3'];
+print(params.catchall); // (1, 2, 3)
 ```
 
 ## Router
@@ -287,12 +282,12 @@ In RoutingKit, `TrieRouter` is an implementation of `Router`. It is a router bas
 `register` method is used to register routes, it has two parameters:
 
 - `value`: Route value, it is a generic parameter, specified by the generic parameter of `Router<T>`.
-- `path`: Route component, it is an `Iterable<PathComponent>` type parameter.
+- `path`: Route component, it is an `Iterable<Segment>` type parameter.
 
 Example:
 
 ```dart
-router.register(0, '/users/:user_id'.pathComponents);
+router.register(0, '/users/:user_id'.asSegments);
 ```
 
 ### `lookup`
@@ -308,7 +303,7 @@ router.register(0, '/users/:user_id'.pathComponents);
 Example:
 
 ```dart
-router.lookup('/users/1'.splitWithSlash(), Parameters());
+router.lookup('/users/1'.asPaths, Params());
 ```
 
 ## Case sensitive
@@ -317,7 +312,7 @@ RoutingKit is case sensitive by default, you can set case sensitive through the 
 
 ```dart
 final router = TrieRouter(
-  options: ConfigurationOptions(caseSensitive: false), // `false` 表示大小写不敏感
+  caseSensitive: false, // False is case insensitive. default is true.
 );
 ```
 

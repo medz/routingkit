@@ -1,8 +1,5 @@
 import 'package:test/test.dart';
-import 'package:routingkit/src/_internal/node.dart';
 import 'package:routingkit/routingkit.dart';
-
-final int x = 1, y = 2, z = 3;
 
 void main() {
   test('Base routing', () {
@@ -178,34 +175,5 @@ void main() {
     expect(
         router.lookup(['users', 'seven', 'posts', '2'], parameters), equals(0));
     expect(parameters.catchall, ['posts', '2']);
-  });
-
-  // Router description
-  test('Router description', () {
-    final Segment constA = Segment.constant('a'),
-        constOne = Segment.constant('1'),
-        paramOne = Segment.param('1'),
-        anything = Segment.any(),
-        catchall = Segment.catchall();
-
-    final router = TrieRouter()
-      ..register(0, [constA, anything])
-      ..register(1, [constA, constOne, catchall])
-      ..register(1, [constA, constOne, anything])
-      ..register(1, [anything, constA, paramOne])
-      ..register(1, [catchall]);
-
-    final String description = '''
-$rightArrow ${constA.toString()}
-$space$rightArrow ${constOne.toString()}
-$space$space$rightArrow ${anything.toString()}
-$space$space$rightArrow ${catchall.toString()}
-$space$rightArrow ${anything.toString()}
-$rightArrow ${anything.toString()}
-$space$rightArrow ${constA.toString()}
-$space$space$rightArrow ${paramOne.toString()}
-$rightArrow ${catchall.toString()}''';
-
-    expect(router.description, equals(description));
   });
 }

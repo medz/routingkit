@@ -57,27 +57,19 @@ class TrieRouter<T> implements Router<T> {
         continue;
       }
 
-      // No matches, return catch all if we have one
-      if (currentCatchall case (Node<T> catchall, Iterable<String> values)) {
-        // fallback to catchall output if we have one
-        params.catchall = values;
-
-        return catchall.value;
+      if (currentCatchall != null) {
+        params.catchall = currentCatchall.$2;
       }
-
-      // No matches, return null
-      return null;
+      return currentCatchall?.$1.value;
     }
 
-    if (currentNode.value != null) return currentNode.value;
-    if (currentCatchall case (Node<T> catchall, Iterable<String> values)) {
-      // fallback to catchall output if we have one
-      params.catchall = values;
-
-      return catchall.value;
+    if (currentNode.value != null) {
+      return currentNode.value;
+    } else if (currentCatchall != null) {
+      params.catchall = currentCatchall.$2;
     }
 
-    return null;
+    return currentCatchall?.$1.value;
   }
 
   @override
@@ -89,13 +81,13 @@ class TrieRouter<T> implements Router<T> {
 
     // for each dynamic path in the route get the appropriate node,
     // creating it if it doesn't exist.
-    for (final (index, component) in segments.indexed) {
-      if (component is CatchallSegment && index < segments.length - 1) {
+    for (final (index, segment) in segments.indexed) {
+      if (segment is CatchallSegment && index < segments.length - 1) {
         throw ArgumentError.value(
-            component, 'path', 'Catchall must be the last segment');
+            segment, 'path', 'Catchall must be the last segment');
       }
 
-      current = current.childOrCreate(component, caseSensitive);
+      current = current.childOrCreate(segment, caseSensitive);
     }
 
     // If the node already has a value, it means that the route is duplicated.
@@ -105,9 +97,6 @@ class TrieRouter<T> implements Router<T> {
 
     current.value = value;
   }
-
-  /// Returns the node description.
-  String get description => _root.description;
 }
 
 extension on String {
