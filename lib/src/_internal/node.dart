@@ -1,8 +1,5 @@
 import '../segment.dart';
 
-const space = '    ';
-const rightArrow = '→';
-
 /// Describes a node that has matched a parameter or anything.
 class Wildcard<T> {
   final Node<T> node;
