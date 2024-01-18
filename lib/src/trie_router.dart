@@ -83,8 +83,11 @@ class TrieRouter<T> implements Router<T> {
     // creating it if it doesn't exist.
     for (final (index, segment) in segments.indexed) {
       if (segment is CatchallSegment && index < segments.length - 1) {
-        throw ArgumentError.value(
+        final error = ArgumentError.value(
             segment, 'path', 'Catchall must be the last segment');
+        logger.severe(error.message, error, error.stackTrace);
+
+        throw error;
       }
 
       current = current.childOrCreate(segment, caseSensitive);

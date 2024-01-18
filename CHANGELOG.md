@@ -1,3 +1,8 @@
+## 0.2.1
+
+- Remove unused constants.
+- `Catchall` path segment not in the last postion error message to be logger.
+
 ## 0.2.0
 
 BREAKING CHANGE: Refactor all
