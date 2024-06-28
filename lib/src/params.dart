@@ -1,47 +1,37 @@
+import 'constants.dart';
+
 class Params extends Iterable<(String name, String value)> {
-  /// Internal storage.
   final _storage = <(String name, String value)>[];
-  _Catchall? _catchall;
 
   @override
-  Iterator<(String, String)> get iterator => _storage.iterator;
+  Iterator<(String name, String value)> get iterator => _storage.iterator;
 
-  /// Returns a first value for the given [name].
-  String? get(name) =>
-      firstWhereNull((element) => element.$1 == name)?.$2.tryDecodeComponent();
-
-  /// Returns all values for the given [name].
-  Iterable<String> getAll(name) => where((element) => element.$1 == name)
-      .map((e) => e.$2.tryDecodeComponent());
-
-  /// Appends a new parameter value.
-  void append(String name, String value) => _storage.add((name, value));
-
-  /// Returns or sets the catchall segment matched values.
-  Iterable<String> get catchall {
-    if (_catchall?.encoded == true) {
-      _catchall = _Catchall(
-        encoded: false,
-        _catchall!.values.map((e) => e.tryDecodeComponent()),
-      );
+  void add(String name, String value) {
+    if (name == kCatchall) {
+      _storage.removeWhere((element) => element.$1 == kCatchall);
     }
 
-    return _catchall?.values ?? const <String>[];
+    _storage.add((name, value));
   }
 
-  /// Sets the catchall segment matched values.
-  set catchall(Iterable<String> values) =>
-      _catchall = _Catchall(values, encoded: true);
+  void remove(String name, [String? value]) {
+    _storage.removeWhere(
+      (e) => switch ((name, value)) {
+        (String name, String value) => e.$1 == name && e.$2 == value,
+        (String name, _) => e.$1 == name,
+      },
+    );
+  }
 
-  /// Returns the param names.
-  Iterable<String> get keys => map((e) => e.$1);
-}
+  String? call(String name) {
+    return firstWhereNull((element) => element.$1 == name)?.$2;
+  }
 
-class _Catchall {
-  final Iterable<String> values;
-  final bool encoded;
+  Iterable<String> valuesOf(String name) {
+    return where((element) => element.$1 == name).map((e) => e.$2);
+  }
 
-  const _Catchall(this.values, {this.encoded = false});
+  String? get catchall => this(kCatchall);
 }
 
 extension<T> on Iterable<T> {
@@ -51,15 +41,5 @@ extension<T> on Iterable<T> {
     }
 
     return null;
-  }
-}
-
-extension on String {
-  String tryDecodeComponent() {
-    try {
-      return Uri.decodeComponent(this);
-    } catch (_) {
-      return this;
-    }
   }
 }
