@@ -1,5 +1,17 @@
-import 'package:routingkit/routingkit.dart';
+import 'package:routingkit/routingkit.dart' hide createRouter;
+import 'package:routingkit/routingkit.dart' as routingkit show createRouter;
 import 'package:test/test.dart';
+
+Router<T> createRouter<T>({
+  bool caseSensitive = false,
+  Map<String, T> routes = const {},
+}) {
+  return routingkit.createRouter(
+    driver: const RadixTrieRouterDriver(),
+    caseSensitive: caseSensitive,
+    routes: routes,
+  );
+}
 
 extension<T> on Router<T> {
   T? valueOf(String path) => lookup(path).$2;
@@ -22,19 +34,17 @@ main() {
       caseSensitive: true,
       routes: {'FoO/Bar': 0},
     );
-    final (_, value) = router.lookup('FoO/Bar');
 
-    expect(value, equals(0));
+    expect(router.valueOf('FoO/Bar'), equals(0));
   });
 
   test('Case insensitive routing', () {
     final router = createRouter(
-      caseSensitive: true,
+      caseSensitive: false,
       routes: {'FoO/Bar': 0},
     );
-    final (_, value) = router.lookup('FOO/bar');
 
-    expect(value, equals(0));
+    expect(router.valueOf('FOO/bar'), equals(0));
   });
 
   // Any routing
@@ -62,20 +72,20 @@ main() {
     expect(router.lookup('c').$2, isNull);
     expect(router.lookup('c/a').$2, isNull);
     expect(router.lookup('c/a/c').$2, isNull);
-    expect(router.lookup('c/b/c/d'), equals(2));
+    expect(router.lookup('c/b/c/d').$2, equals(2));
 
     // d
     expect(router.lookup('d').$2, isNull);
-    expect(router.lookup('d/a'), isNull);
-    expect(router.lookup('d/a/b'), equals(3));
+    expect(router.lookup('d/a').$2, isNull);
+    expect(router.lookup('d/a/b').$2, equals(3));
 
     // e
     expect(router.lookup('e/1/d/f').$2, equals(4));
 
     // Other
-    expect(router.lookup('f/e/1').$2, equals(5));
-    expect(router.lookup('g/e/1').$2, equals(5));
-    expect(router.lookup('h/e/1').$2, equals(5));
+    expect(router.lookup('f/f/1').$2, equals(5));
+    expect(router.lookup('g/f/1').$2, equals(5));
+    expect(router.lookup('h/f/1').$2, equals(5));
   });
 
   // Wildcard routing

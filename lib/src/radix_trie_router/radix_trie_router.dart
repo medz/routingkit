@@ -17,35 +17,43 @@ class RadixTrieRouter<T> implements Router<T> {
     final params = Params();
     final namedParams = <(WildcardRouteRadixTrieNode<T>, String)>[];
 
-    Iterable<String>? catchall;
-    RouteRadixTrieNode<T> current = node;
+    RouteRadixTrieNode<T>? catchallNode;
+    Iterable<String> catchallValues = const [];
+    RouteRadixTrieNode<T>? current = node;
+
     for (final (index, pathSegment) in pathSegments.indexed) {
-      if (current.catchall != null) {
-        catchall = pathSegments.skip(index);
+      if (current?.catchall != null) {
+        catchallValues = pathSegments.skip(index);
+        catchallNode = current?.catchall!;
       }
 
-      final constant = current.constants[
+      final constant = current?.constants[
           options.caseSensitive ? pathSegment : pathSegment.toLowerCase()];
       if (constant != null) {
         current = constant;
-        catchall = null;
         continue;
       }
 
-      final wildcard = current.wildcard;
+      final wildcard = current?.wildcard;
       if (wildcard != null) {
         namedParams.add((wildcard, pathSegment));
         current = wildcard;
-        catchall = null;
         continue;
+      }
+
+      if (constant == null && wildcard == null && catchallNode != null) {
+        current = null;
       }
 
       break;
     }
 
-    if (current.value == null) return (params, null);
-    if (catchall != null && catchall.isNotEmpty) {
-      params.add(kCatchall, catchall.join('/'));
+    if (current?.value == null && catchallNode != null) {
+      current = catchallNode;
+
+      if (catchallValues.isNotEmpty) {
+        params.add(kCatchall, catchallValues.join('/'));
+      }
     }
 
     for (final (node, value) in namedParams) {
@@ -55,7 +63,7 @@ class RadixTrieRouter<T> implements Router<T> {
       }
     }
 
-    return (params, current.value!);
+    return (params, current?.value);
   }
 
   @override
