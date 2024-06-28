@@ -87,13 +87,6 @@ Register a route and store a value.
 
 Remove a registered route.
 
-## Benchmark
-
-RoutingKit has a built-in Radix-Tree router. Here is the performance test information:
-
-<!-- benchmark start -->
-<!-- benchmark end -->
-
 ## License
 
 RoutingKit is open-sourced software licensed under the [MIT license](https://github.com/medz/routingkit?tab=MIT-1-ov-file).
