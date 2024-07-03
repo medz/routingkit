@@ -49,9 +49,9 @@ void main() {
         '/users/:name': 0,
     });
 
-    final (params, value) = router.lookup('/users/seven');
-    print('User name: ${params('name')}'); // seven
-    print('Matched user value: $value'); // 0
+    final result = router.lookup('/users/seven');
+    print('User name: ${result?.params('name')}'); // seven
+    print('Matched user value: ${result?.value}'); // 0
 }
 ```
 
@@ -77,7 +77,7 @@ router.register('/path/bar/**', 'catchall route'); // matches `/path/bar/<any>`
 
 ### `router.lookup(Srring path)
 
-Returns a `(Params, T?)` record, where Params stores all matched parameters and `T?` store value. If `T` is `null`, it means no correct match.
+Returns a `Result<T>?` record, where Params stores all matched parameters and `T?` store value. If `T` is `null`, it means no correct match.
 
 ### `router.register(String route, T value)`
 

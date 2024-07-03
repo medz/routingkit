@@ -14,7 +14,7 @@ Router<T> createRouter<T>({
 }
 
 extension<T> on Router<T> {
-  T? valueOf(String path) => lookup(path).$2;
+  T? valueOf(String path) => lookup(path)?.value;
 }
 
 main() {
@@ -23,10 +23,11 @@ main() {
       routes: {'/users/:name': 0},
     );
 
-    final (params, value) = router.lookup('/users/Seven');
+    final result = router.lookup('/users/Seven');
 
-    expect(params('name'), equals('Seven'));
-    expect(value, equals(0));
+    expect(result?.params('name'), equals('Seven'));
+    expect(result?.value, equals(0));
+    expect(result?.route, equals('users/:name'));
   });
 
   test('Case ensitive routing', () {
@@ -60,32 +61,32 @@ main() {
       },
     );
 
-    expect(router.lookup('a').$2, isNull);
-    expect(router.lookup('a/a').$2, equals(0));
-    expect(router.lookup('a/b').$2, equals(0));
+    expect(router.valueOf('a'), isNull);
+    expect(router.valueOf('a/a'), equals(0));
+    expect(router.valueOf('a/b'), equals(0));
 
-    expect(router.lookup('b').$2, isNull);
-    expect(router.lookup('b/a').$2, isNull);
-    expect(router.lookup('b/a/c').$2, equals(1));
+    expect(router.valueOf('b'), isNull);
+    expect(router.valueOf('b/a'), isNull);
+    expect(router.valueOf('b/a/c'), equals(1));
 
     // c
-    expect(router.lookup('c').$2, isNull);
-    expect(router.lookup('c/a').$2, isNull);
-    expect(router.lookup('c/a/c').$2, isNull);
-    expect(router.lookup('c/b/c/d').$2, equals(2));
+    expect(router.valueOf('c'), isNull);
+    expect(router.valueOf('c/a'), isNull);
+    expect(router.valueOf('c/a/c'), isNull);
+    expect(router.valueOf('c/b/c/d'), equals(2));
 
     // d
-    expect(router.lookup('d').$2, isNull);
-    expect(router.lookup('d/a').$2, isNull);
-    expect(router.lookup('d/a/b').$2, equals(3));
+    expect(router.valueOf('d'), isNull);
+    expect(router.valueOf('d/a'), isNull);
+    expect(router.valueOf('d/a/b'), equals(3));
 
     // e
-    expect(router.lookup('e/1/d/f').$2, equals(4));
+    expect(router.valueOf('e/1/d/f'), equals(4));
 
     // Other
-    expect(router.lookup('f/f/1').$2, equals(5));
-    expect(router.lookup('g/f/1').$2, equals(5));
-    expect(router.lookup('h/f/1').$2, equals(5));
+    expect(router.valueOf('f/f/1'), equals(5));
+    expect(router.valueOf('g/f/1'), equals(5));
+    expect(router.valueOf('h/f/1'), equals(5));
   });
 
   // Wildcard routing
@@ -100,15 +101,15 @@ main() {
     });
 
     const path = 'a/1/b';
-    final (p1, v1) = router1.lookup(path);
-    final (p2, v2) = router2.lookup(path);
+    final result1 = router1.lookup(path);
+    final result2 = router2.lookup(path);
 
-    expect(p1, isEmpty);
-    expect(v1, equals(1));
+    expect(result1?.params, isEmpty);
+    expect(result1?.value, equals(1));
 
-    expect(p2.length, equals(1));
-    expect(p2('1'), equals('1'));
-    expect(v2, equals(1));
+    expect(result2?.params.length, equals(1));
+    expect(result2?.params('1'), equals('1'));
+    expect(result2?.value, equals(1));
   });
 
   // Catch all nesting
@@ -145,19 +146,35 @@ main() {
       'users/**': 1,
     });
 
-    final (p1, v1) = router.lookup('users');
-    expect(p1, isEmpty);
-    expect(p1.catchall, isNull);
-    expect(v1, isNull);
+    final result1 = router.lookup('users');
+    expect(result1, isNull);
 
-    final (p2, v2) = router.lookup('users/foo');
-    expect(p2.catchall, equals('foo'));
-    expect(v2, equals(1));
+    final result2 = router.lookup('users/foo');
+    expect(result2?.params.catchall, equals('foo'));
+    expect(result2?.value, equals(1));
 
-    final (p3, v3) = router.lookup('users/seven/posts/2');
-    expect(v3, equals(0));
-    expect(p3, isNotEmpty);
-    expect(p3('name'), 'seven');
-    expect(p3.catchall, equals('posts/2'));
+    final result3 = router.lookup('users/seven/posts/2');
+    expect(result3?.value, equals(0));
+    expect(result3?.params, isNotEmpty);
+    expect(result3?.params('name'), 'seven');
+    expect(result3?.params.catchall, equals('posts/2'));
+  });
+
+  test('build path', () {
+    final router = createRouter();
+    final path = router.buildPath(
+      '/users/:user/posts/:id',
+      params: {'user': 'seven', 'id': '1'},
+    );
+
+    expect(path, equals('users/seven/posts/1'));
+
+    final path2 = router.buildPath(
+      'demo/:name/*/:a/**',
+      params: {'name': '1', 'a': '2'},
+      wildcard: ['3'],
+      catchall: '4',
+    );
+    expect(path2, equals('demo/1/3/2/4'));
   });
 }

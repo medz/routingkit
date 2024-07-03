@@ -12,10 +12,10 @@ class RadixTrieRouter<T> implements Router<T> {
   final RouterOptions options;
 
   @override
-  MatchedRoute<T> lookup(String path) {
+  Result<T>? lookup(String path) {
     final pathSegments = splitPathSegments(path);
     final params = Params();
-    final namedParams = <(WildcardRouteRadixTrieNode<T>, String)>[];
+    final routeNodes = <(RouteRadixTrieNode<T>?, String)>[];
 
     RouteRadixTrieNode<T>? catchallNode;
     Iterable<String> catchallValues = const [];
@@ -30,13 +30,14 @@ class RadixTrieRouter<T> implements Router<T> {
       final constant = current?.constants[
           options.caseSensitive ? pathSegment : pathSegment.toLowerCase()];
       if (constant != null) {
+        routeNodes.add((null, pathSegment));
         current = constant;
         continue;
       }
 
       final wildcard = current?.wildcard;
       if (wildcard != null) {
-        namedParams.add((wildcard, pathSegment));
+        routeNodes.add((wildcard, pathSegment));
         current = wildcard;
         continue;
       }
@@ -50,20 +51,38 @@ class RadixTrieRouter<T> implements Router<T> {
 
     if (current?.value == null && catchallNode != null) {
       current = catchallNode;
+      routeNodes.add((null, '**'));
 
       if (catchallValues.isNotEmpty) {
         params.add(kCatchall, catchallValues.join('/'));
       }
     }
 
-    for (final (node, value) in namedParams) {
-      final name = node.names[current];
-      if (name != null) {
-        params.add(name, value);
+    if (current?.value == null) return null;
+
+    final route = <String>[];
+    for (final (node, value) in routeNodes) {
+      if (node == null && value.isNotEmpty) {
+        route.add(value);
+      } else if (node is WildcardRouteRadixTrieNode<T>) {
+        final name = node.names[current];
+
+        if (name != null) {
+          params.add(name, value);
+        }
+
+        route.add(switch (name) {
+          String name => ':$name',
+          _ => '*',
+        });
       }
     }
 
-    return (params, current?.value);
+    return Result(
+      route: route.join('/'),
+      params: params,
+      value: current!.value as T,
+    );
   }
 
   @override
@@ -114,6 +133,28 @@ class RadixTrieRouter<T> implements Router<T> {
       rmeoveNestParentNameOf(current, current);
       cleanNestParentNodeOf(current);
     }
+  }
+
+  @override
+  String buildPath(
+    String route, {
+    Map<String, String>? params,
+    Iterable<String>? wildcard,
+    String? catchall,
+  }) {
+    int index = 0;
+
+    return createPathSegments(route).map((segment) {
+      return switch (segment) {
+        ConstPathSegment(value: final segment) => segment,
+        CatchallPathSegment() =>
+          ArgumentError.checkNotNull(catchall, 'catchall'),
+        AnyPathSegment() => ArgumentError.checkNotNull(
+            wildcard?.elementAt(index++), 'wildcard element at `$index`'),
+        ParamPathSegment(name: final name) =>
+          ArgumentError.checkNotNull(params?[name], 'params[$name]'),
+      };
+    }).join('/');
   }
 }
 
