@@ -11,3 +11,52 @@
 <p align="center">
 Routing Kit - Lightweight and fast router for Dart.
 </p>
+
+## Installation
+
+Run this command:
+
+```bash
+dart pub add routingkit
+```
+
+With Flutter:
+
+```bash
+flutter pub add routingkit
+```
+
+## Usage
+
+### Create a router instance and insert routes
+
+```dart
+import from "routingkit";
+
+const router = createRouter();
+
+addRoute(router, "GET", "/path", 'this path');
+addRoute(router, "POST", "/path/:name", 'named route');
+addRoute(router, "GET", "/path/foo/**", 'wildcard route');
+addRoute(router, "GET", "/path/foo/**:name", 'named wildcard route');
+```
+
+### Match route to access matched data
+
+```dart
+// Returns [{ payload: 'this path' }]
+findRoute(router, "GET", "/path");
+
+// Returns [{ payload: 'named route', params: { name: 'fooval' } }]
+findRoute(router, "POST", "/path/fooval");
+
+// Returns [{ payload: 'wildcard route' }]
+findRoute(router, "GET", "/path/foo/bar/baz");
+
+// Returns undefined (no route matched for/)
+findRoute(router, "GET", "/");
+```
+
+## License
+
+RoutingKit is open-sourced software licensed under the [MIT license](https://github.com/medz/routingkit?tab=MIT-1-ov-file).

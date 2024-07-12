@@ -1,6 +1,7 @@
 import '../_utils.dart';
 import '../types.dart';
 
+/// Find all route patterns that match the given path.
 Iterable<MatchedRoute<T>> findAllRoutes<T>(
     RouterContext<T> context, String method, String path,
     {bool params = true}) {

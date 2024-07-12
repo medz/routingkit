@@ -1,6 +1,7 @@
 import '../_utils.dart';
 import '../types.dart';
 
+/// Find a routes.
 Iterable<MatchedRoute<T>>? findRoute<T>(
     RouterContext<T> context, String method, String path,
     {bool params = true}) {

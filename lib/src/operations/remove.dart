@@ -1,6 +1,7 @@
 import '../_utils.dart';
 import '../types.dart';
 
+/// Remove a route from the router context.
 void removeRoute<T>(RouterContext<T> context, String methodOrPath,
     [String? path]) {
   final segments = splitPath(path ?? methodOrPath);
