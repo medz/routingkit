@@ -10,9 +10,9 @@ funding:
 topics:
   - router
   - routing
-  - routing-kit
-  - radix
-  - radix-router
+  - route
+  - fast router
+  - routing kit
 
 environment:
   sdk: ^3.3.0
