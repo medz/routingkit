@@ -1,7 +1,7 @@
 name: routingkit
 description: >-
-  Routing Kit - router abstractions and built-in high-performance Radix-Trie router driver.
-version: 1.1.0
+  Routing Kit - Lightweight and fast router for Dart.
+version: 2.0.0
 repository: https://github.com/medz/routingkit
 
 funding:
@@ -10,9 +10,9 @@ funding:
 topics:
   - router
   - routing
+  - route
+  - fast-router
   - routing-kit
-  - radix
-  - radix-router
 
 environment:
   sdk: ^3.3.0

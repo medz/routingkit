@@ -9,83 +9,53 @@
 </p>
 
 <p align="center">
-Routing Kit - router abstractions and built-in high-performance Radix-Trie router driver.
+Routing Kit - Lightweight and fast router for Dart.
 </p>
-
-- **High-performance**：Based on [Radix Tree](https://en.wikipedia.org/wiki/Radix_tree) implementation, efficient performance.
-- **Accurate**：Using `/` to split trie-node nodes can accurately match routes.
-- **Flexible**：Support dynamic routing matching
 
 ## Installation
 
-Add the dependency to your `pubspec.yaml` file:
-
-```yaml
-dependencies:
-  routingkit: ^1.0.0
-```
-
-Or install it with `pub`:
+Run this command:
 
 ```bash
 dart pub add routingkit
-# or
+```
+
+With Flutter:
+
+```bash
 flutter pub add routingkit
 ```
 
-## Sponsor RoutingKit
+## Usage
 
-RoutingKit is an open source project based on the [MIT license](https://github.com/medz/routingkit?tab=MIT-1-ov-file). If your Router implementation uses RoutingKit, or you find my work helpful to you, please sponsor me on [GitHub Sponsors](https://github.com/sponsors/medz). Your support is my biggest motivation.
-
-## Getting Started
-
-RoutingKit improves the performance of route matching and provides a simpler API. Here is a simple example:
+### Create a router instance and insert routes
 
 ```dart
-import 'package:routingkit/routingkit.dart';
+import from "routingkit";
 
-void main() {
-    final router = createRouter(routes: {
-        '/users/:name': 0,
-    });
+const router = createRouter();
 
-    final result = router.lookup('/users/seven');
-    print('User name: ${result?.params('name')}'); // seven
-    print('Matched user value: ${result?.value}'); // 0
-}
+addRoute(router, "GET", "/path", 'this path');
+addRoute(router, "POST", "/path/:name", 'named route');
+addRoute(router, "GET", "/path/foo/**", 'wildcard route');
+addRoute(router, "GET", "/path/foo/**:name", 'named wildcard route');
 ```
 
-### Create a router instance and register routes
+### Match route to access matched data
 
 ```dart
-final router = createRouter();
+// Returns [{ payload: 'this path' }]
+findRoute(router, "GET", "/path");
 
-router.register('/path', 'static route'); // matches `/path`
-router.register('/path/:name', 'named route'); // matches `/path/:name<any>`
-router.register('/path/foo/*', 'unnamed route'); // matches `/path/foo/<any>`
-router.register('/path/bar/**', 'catchall route'); // matches `/path/bar/<any>`
+// Returns [{ payload: 'named route', params: { name: 'fooval' } }]
+findRoute(router, "POST", "/path/fooval");
+
+// Returns [{ payload: 'wildcard route' }]
+findRoute(router, "GET", "/path/foo/bar/baz");
+
+// Returns undefined (no route matched for/)
+findRoute(router, "GET", "/");
 ```
-
-### Route Path Segment
-
-- `<segment>`: Constant segment, for example `foo` only match `foo` string.
-- `:name`: Param named segment, define a param name, match and store to `Params`.
-- `*`: Unnamed segment, Similar to route naming segemnt, but does not store parameters in `Params`.
-- `**`: Catchall segment, any segments are matched.
-
-## The `Router` Methods
-
-### `router.lookup(Srring path)
-
-Returns a `Result<T>?` record, where Params stores all matched parameters and `T?` store value. If `T` is `null`, it means no correct match.
-
-### `router.register(String route, T value)`
-
-Register a route and store a value.
-
-### `router.remove(String route)`
-
-Remove a registered route.
 
 ## License
 
