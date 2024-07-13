@@ -45,7 +45,7 @@ void addRoute<T>(RouterContext<T> context, String method, String path, T data) {
   final normalizedMethod = normalizeMethod(method);
   node.methods.putIfAbsent(normalizedMethod, () => []);
   node.methods[normalizedMethod]!
-      .add(_MethodDataImpl(data, hasParams ? params : null));
+      .add(createMethodData(data, hasParams ? params : null));
 
   if (!hasParams) {
     context.static[joinPath(segments)] = node;
@@ -63,14 +63,4 @@ Pattern _getParamMatcherOf(String segment) {
   });
 
   return RegExp(source);
-}
-
-final class _MethodDataImpl<T> implements MethodData<T> {
-  const _MethodDataImpl(this.data, [this.params]);
-
-  @override
-  final T data;
-
-  @override
-  final IndexedParams? params;
 }

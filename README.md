@@ -44,13 +44,13 @@ addRoute(router, "GET", "/path/foo/**:name", 'named wildcard route');
 ### Match route to access matched data
 
 ```dart
-// Returns [{ payload: 'this path' }]
+// Returns [{data: 'This path'}]
 findRoute(router, "GET", "/path");
 
-// Returns [{ payload: 'named route', params: { name: 'fooval' } }]
+// Returns [{ data: 'named route', params: { name: 'fooval' } }]
 findRoute(router, "POST", "/path/fooval");
 
-// Returns [{ payload: 'wildcard route' }]
+// Returns [{ data: 'wildcard route' }]
 findRoute(router, "GET", "/path/foo/bar/baz");
 
 // Returns undefined (no route matched for/)

@@ -17,4 +17,21 @@ final class _RouterContextImpl<T> implements RouterContext<T> {
 
   @override
   final static = <String, Node<T>?>{};
+
+  @override
+  Map<String, Object?> toDebugInfo() {
+    return {
+      'root': root.toDebugInfo(),
+      if (static.isNotEmpty == true)
+        'static': static.map(
+          (key, value) => MapEntry(key, value?.toDebugInfo()),
+        ),
+    };
+  }
+
+  @override
+  String get debugName => 'RouterContext<$T>';
+
+  @override
+  toString() => createDebugString(this);
 }

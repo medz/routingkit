@@ -18,7 +18,7 @@ Iterable<MatchedRoute<T>>? findRoute<T>(
   }
 
   // If full path is static
-  final static = context.root.static[joinPath(segments)];
+  final static = context.static[joinPath(segments)];
   if (static != null) {
     final match = static.methods[normalizedMethod];
     if (match != null) {
@@ -26,7 +26,7 @@ Iterable<MatchedRoute<T>>? findRoute<T>(
     }
   }
 
-  return _lookupTree(context, context.root, method, segments, 0)
+  return _lookupTree(context, context.root, normalizedMethod, segments, 0)
       ?.map(createMatchedRouteOf);
 }
 

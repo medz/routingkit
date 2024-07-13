@@ -1,5 +1,10 @@
+abstract interface class RoutingKitDebuging {
+  String get debugName;
+  Map<String, Object?> toDebugInfo();
+}
+
 /// Router context.
-abstract interface class RouterContext<T> {
+abstract interface class RouterContext<T> implements RoutingKitDebuging {
   /// Gets a root route node.
   Node<T> get root;
 
@@ -11,7 +16,7 @@ abstract interface class RouterContext<T> {
 typedef IndexedParams = Iterable<(int, Pattern)>;
 
 /// Method data.
-abstract interface class MethodData<T> {
+abstract interface class MethodData<T> implements RoutingKitDebuging {
   /// Gets a [T] type data for current method.
   T get data;
 
@@ -20,7 +25,7 @@ abstract interface class MethodData<T> {
 }
 
 /// Route node.
-abstract interface class Node<T> {
+abstract interface class Node<T> implements RoutingKitDebuging {
   /// The node key name.
   String get key;
 
@@ -38,7 +43,7 @@ abstract interface class Node<T> {
 }
 
 /// Matched route.
-abstract interface class MatchedRoute<T> {
+abstract interface class MatchedRoute<T> implements RoutingKitDebuging {
   /// Returns a data for current matched route.
   T get data;
 
