@@ -47,9 +47,6 @@ final class _MethodDataImpl<T> implements MethodData<T> {
   final IndexedParams? params;
 
   @override
-  toString() => createDebugString(this);
-
-  @override
   Map<String, Object?> toDebugInfo() {
     return {
       'data': data,
@@ -59,6 +56,12 @@ final class _MethodDataImpl<T> implements MethodData<T> {
 
   @override
   String get debugName => 'MethodData<$T>';
+
+  @override
+  String toDebugString() => createDebugString(this);
+
+  @override
+  toString() => toDebugString();
 }
 
 final class _NodeImpl<T> implements Node<T> {
@@ -80,9 +83,6 @@ final class _NodeImpl<T> implements Node<T> {
   Node<T>? wildcard;
 
   @override
-  toString() => createDebugString(this);
-
-  @override
   Map<String, Object?> toDebugInfo() {
     return {
       'key': key.isEmpty ? '<root>' : key,
@@ -95,6 +95,12 @@ final class _NodeImpl<T> implements Node<T> {
 
   @override
   String get debugName => 'Node<$T>';
+
+  @override
+  toString() => toDebugString();
+
+  @override
+  String toDebugString() => createDebugString(this);
 }
 
 final class _MatchedRouteImpl<T> implements MatchedRoute<T> {
@@ -115,10 +121,13 @@ final class _MatchedRouteImpl<T> implements MatchedRoute<T> {
   }
 
   @override
-  toString() => createDebugString(this);
+  String get debugName => 'MatchedRoute<$T>';
 
   @override
-  String get debugName => 'MatchedRoute<$T>';
+  String toDebugString() => createDebugString(this);
+
+  @override
+  toString() => toDebugString();
 }
 
 MethodData<T> createMethodData<T>(T data, [IndexedParams? params]) =>

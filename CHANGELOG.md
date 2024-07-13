@@ -1,3 +1,27 @@
+# Routing Kit v2.0.2
+
+To install Routing Kit v2.0.2 run this command:
+
+```bash
+# Dart project:
+dart pub add routingkit
+
+# Flutter project:
+flutter pub add routingkit
+```
+
+or update your pubspec.yaml file:
+
+```yaml
+dependencies:
+  routingkit: ^2.0.2
+```
+
+## What's Changed
+
+* Fixed static route not found
+* Support debug information
+
 # Routing Kit v2.0.1
 
 To install Routing Kit v2.0.1 run this command:

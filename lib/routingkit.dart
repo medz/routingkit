@@ -6,7 +6,7 @@ library routingkit;
 export 'src/context.dart';
 export 'src/types.dart';
 
-export 'src/operations/add.dart';
-export 'src/operations/find.dart';
-export 'src/operations/find_all.dart';
-export 'src/operations/remove.dart';
+export 'src/utils/add.dart';
+export 'src/utils/find.dart';
+export 'src/utils/find_all.dart';
+export 'src/utils/remove.dart';

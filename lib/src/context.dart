@@ -33,5 +33,8 @@ final class _RouterContextImpl<T> implements RouterContext<T> {
   String get debugName => 'RouterContext<$T>';
 
   @override
-  toString() => createDebugString(this);
+  String toDebugString() => createDebugString(this);
+
+  @override
+  toString() => toDebugString();
 }

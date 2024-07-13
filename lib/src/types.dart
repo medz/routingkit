@@ -1,6 +1,13 @@
+/// Routing kit debuging interface.
 abstract interface class RoutingKitDebuging {
+  /// Gets current object debug name.
   String get debugName;
+
+  /// Creates a debug map from this.
   Map<String, Object?> toDebugInfo();
+
+  /// Creates a debug string,
+  String toDebugString();
 }
 
 /// Router context.

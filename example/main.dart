@@ -1,7 +1,7 @@
 import 'package:routingkit/routingkit.dart';
 
 void main() {
-  final router = createRouter();
+  final router = createRouter<String>();
 
   addRoute(router, 'get', '/path', 'Static path');
   addRoute(router, 'get', '/path/:name', 'Param route');
@@ -11,16 +11,17 @@ void main() {
       router, 'get', '/files/:dir/:filename.:format,v:version', 'Mixed route');
 
   // Static
-  // print(findRoute(router, 'get', '/path'));
+  print(findRoute(router, 'get', '/path'));
 
   // // Param
-  // print(findRoute(router, 'get', '/path/seven'));
+  print(findRoute(router, 'get', '/path/seven'));
 
-  // // Wildcard
-  // print(findRoute(router, "GET", "/path/foo/bar/baz"));
+  // Wildcard
+  print(findRoute(router, "get", "/path/foo/bar/baz"));
 
-  // // Mixed
-
-  // print(router.root.static['files']);
+  // Mixed
   print(findRoute(router, "GET", "/files/pubspec.yaml.dart,v1"));
+
+  // Print debug string
+  print(router.toDebugString());
 }
