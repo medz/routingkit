@@ -36,10 +36,13 @@ Iterable<MethodData<T>>? _lookupTree<T>(RouterContext<T> context, Node<T> node,
   if (index == segments.length) {
     final match = node.methods[method];
     if (match != null) return match;
+
+    // Fallback routes, TODO: Maybe it's wrong behavior
     if (node.param != null) {
       final match = node.param!.methods[method];
       if (match != null) return match;
     }
+
     if (node.wildcard != null) {
       return node.wildcard!.methods[method];
     }
