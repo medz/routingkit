@@ -4,29 +4,27 @@ import '../types.dart';
 /// Adds a route to the router context.
 void addRoute<T>(RouterContext<T> context, String method, String path, T data) {
   final segments = splitPath(path);
-  final params = <(int, Pattern)>[];
+  final params = <IndexedParam>[];
 
   Node<T> node = context.root;
-  int unnamedParamIndex = 0;
 
   for (final (index, segment) in segments.indexed) {
     // Wildcard
     if (segment.startsWith('**')) {
       node = node.wildcard ??= createNode('**');
-      params.add((-index, segment.split(':').elementAtOrNull(1) ?? '_'));
+      params.add(
+          CatchallIndexedParam(-index, segment.split(':').elementAtOrNull(1)));
       break;
     }
 
     // Param
     if (segment == '*' || segment.contains(':')) {
       node = node.param ??= createNode('*');
-      params.add((
-        index,
-        switch (segment) {
-          '*' => '_${unnamedParamIndex++}',
-          _ => _getParamMatcherOf(segment),
-        }
-      ));
+      params.add(switch (segment) {
+        '*' => UnnameIndexedParam(index),
+        String name => _createIndexedParam(index, name),
+      });
+
       continue;
     }
 
@@ -53,14 +51,14 @@ void addRoute<T>(RouterContext<T> context, String method, String path, T data) {
 }
 
 final _paramRegexp = RegExp(r':(\w+)');
-Pattern _getParamMatcherOf(String segment) {
+IndexedParam _createIndexedParam(int index, String segment) {
   if (!segment.contains(':', 1)) {
-    return segment.substring(1);
+    return NameIndexedParam(index, segment.substring(1));
   }
 
   final source = segment.replaceAllMapped(_paramRegexp, (match) {
     return '(?<${match.group(1)}>\\w+)';
   });
 
-  return RegExp(source);
+  return RegExpIndexedParam(index, RegExp(source));
 }

@@ -1,17 +1,5 @@
-/// Routing kit debuging interface.
-abstract interface class RoutingKitDebuging {
-  /// Gets current object debug name.
-  String get debugName;
-
-  /// Creates a debug map from this.
-  Map<String, Object?> toDebugInfo();
-
-  /// Creates a debug string,
-  String toDebugString();
-}
-
 /// Router context.
-abstract interface class RouterContext<T> implements RoutingKitDebuging {
+abstract interface class RouterContext<T> {
   /// Gets a root route node.
   Node<T> get root;
 
@@ -19,20 +7,45 @@ abstract interface class RouterContext<T> implements RoutingKitDebuging {
   Map<String, Node<T>?> get static;
 }
 
-/// Route node indexed params.
-typedef IndexedParams = Iterable<(int, Pattern)>;
+abstract base class IndexedParam {
+  const IndexedParam(this.index);
+
+  final int index;
+}
+
+final class NameIndexedParam extends IndexedParam {
+  const NameIndexedParam(super.index, this.name);
+
+  final String name;
+}
+
+final class RegExpIndexedParam extends IndexedParam {
+  const RegExpIndexedParam(super.index, this.regex);
+
+  final RegExp regex;
+}
+
+final class UnnameIndexedParam extends IndexedParam {
+  const UnnameIndexedParam(super.index);
+}
+
+final class CatchallIndexedParam extends IndexedParam {
+  const CatchallIndexedParam(super.index, [this.name]);
+
+  final String? name;
+}
 
 /// Method data.
-abstract interface class MethodData<T> implements RoutingKitDebuging {
+abstract interface class MethodData<T> {
   /// Gets a [T] type data for current method.
   T get data;
 
   /// Gets current method params.
-  IndexedParams? get params;
+  Iterable<IndexedParam>? get params;
 }
 
 /// Route node.
-abstract interface class Node<T> implements RoutingKitDebuging {
+abstract interface class Node<T> {
   /// The node key name.
   String get key;
 
@@ -49,11 +62,17 @@ abstract interface class Node<T> implements RoutingKitDebuging {
   Node<T>? wildcard;
 }
 
+abstract interface class Params {
+  String? get(String name);
+  Iterable<String> get unnamed;
+  String? get catchall;
+}
+
 /// Matched route.
-abstract interface class MatchedRoute<T> implements RoutingKitDebuging {
+abstract interface class MatchedRoute<T> {
   /// Returns a data for current matched route.
   T get data;
 
   /// Returns a params map for current matched route.
-  Map<String, String>? get params;
+  Params get params;
 }

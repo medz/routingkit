@@ -11,17 +11,21 @@ void main() {
       router, 'get', '/files/:dir/:filename.:format,v:version', 'Mixed route');
 
   // Static
-  print(findRoute(router, 'get', '/path'));
+  final static = findRoute(router, 'get', '/path')?.lastOrNull;
+  print('GET /path, ${static?.data}');
 
-  // // Param
-  print(findRoute(router, 'get', '/path/seven'));
+  // Param
+  final paramRoute = findRoute(router, 'get', '/path/seven')?.lastOrNull;
+  print(
+    'GET /path/:name, ${paramRoute?.data}, name: ${paramRoute?.params.get('name')}',
+  );
 
   // Wildcard
-  print(findRoute(router, "get", "/path/foo/bar/baz"));
+  final wildcard = findRoute(router, "get", "/path/foo/bar/baz")?.lastOrNull;
+  print('GET /path/**, ${wildcard?.data}, ${wildcard?.params.catchall}');
 
   // Mixed
-  print(findRoute(router, "GET", "/files/pubspec.yaml.dart,v1"));
-
-  // Print debug string
-  print(router.toDebugString());
+  print(findRoute(router, "GET", "/files/pubspec.yaml.dart,v1")
+      ?.lastOrNull
+      ?.data);
 }

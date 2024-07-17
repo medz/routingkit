@@ -3,16 +3,11 @@ import '../types.dart';
 
 /// Find a routes.
 Iterable<MatchedRoute<T>>? findRoute<T>(
-    RouterContext<T> context, String method, String path,
-    {bool params = true}) {
+    RouterContext<T> context, String method, String path) {
   final normalizedMethod = normalizeMethod(method);
   final segments = splitPath(path);
 
   MatchedRoute<T> createMatchedRouteOf(MethodData<T> element) {
-    if (!params) {
-      return createMatchedRoute(element.data);
-    }
-
     return createMatchedRoute(
         element.data, getMatchParams(segments, element.params));
   }
@@ -36,8 +31,6 @@ Iterable<MethodData<T>>? _lookupTree<T>(RouterContext<T> context, Node<T> node,
   if (index == segments.length) {
     final match = node.methods[method];
     if (match != null) return match;
-
-    print(node);
 
     // Fallback routes, TODO: Maybe it's wrong behavior
     if (node.param != null) {

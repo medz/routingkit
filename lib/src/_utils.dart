@@ -1,42 +1,5 @@
 import 'types.dart';
 
-String createDebugProps(Map<String, Object?> props, [int indent = 0]) {
-  final buffer = StringBuffer();
-  buffer.write('{');
-  if (props.isNotEmpty) buffer.writeln();
-
-  for (final MapEntry(key: name, value: value) in props.entries) {
-    buffer.write(''.padLeft(indent + 2));
-    buffer.write(name);
-    buffer.write(': ');
-    buffer.write(createDebugString(value, indent + 2));
-    buffer.writeln(',');
-  }
-
-  buffer.write(''.padLeft(indent));
-  buffer.write('}');
-
-  return buffer.toString();
-}
-
-String createDebugString(Object? value, [int indent = 0]) {
-  return switch (value) {
-    RoutingKitDebuging value =>
-      '${value.debugName} ${createDebugString(value.toDebugInfo(), indent)}',
-    Iterable values => createDebugString(values.toList().asMap(), indent),
-    Map(map: final map) => createDebugProps(
-        map(
-          (key, value) => MapEntry(
-            key.toString(),
-            createDebugString(value, indent + 2),
-          ),
-        ),
-        indent,
-      ),
-    _ => value.toString(),
-  };
-}
-
 final class _MethodDataImpl<T> implements MethodData<T> {
   const _MethodDataImpl(this.data, [this.params]);
 
@@ -44,24 +7,7 @@ final class _MethodDataImpl<T> implements MethodData<T> {
   final T data;
 
   @override
-  final IndexedParams? params;
-
-  @override
-  Map<String, Object?> toDebugInfo() {
-    return {
-      'data': data,
-      if (params?.isNotEmpty == true) 'params': params,
-    };
-  }
-
-  @override
-  String get debugName => 'MethodData<$T>';
-
-  @override
-  String toDebugString() => createDebugString(this);
-
-  @override
-  toString() => toDebugString();
+  final Iterable<IndexedParam>? params;
 }
 
 final class _NodeImpl<T> implements Node<T> {
@@ -81,61 +27,24 @@ final class _NodeImpl<T> implements Node<T> {
 
   @override
   Node<T>? wildcard;
-
-  @override
-  Map<String, Object?> toDebugInfo() {
-    return {
-      'key': key.isEmpty ? '<root>' : key,
-      if (methods.isNotEmpty) 'methods': methods,
-      if (static.isNotEmpty) 'static': static,
-      if (param != null) 'param': param,
-      if (wildcard != null) 'wildcard': wildcard,
-    };
-  }
-
-  @override
-  String get debugName => 'Node<$T>';
-
-  @override
-  toString() => toDebugString();
-
-  @override
-  String toDebugString() => createDebugString(this);
 }
 
 final class _MatchedRouteImpl<T> implements MatchedRoute<T> {
-  const _MatchedRouteImpl(this.data, [this.params]);
+  const _MatchedRouteImpl(this.data, this.params);
 
   @override
   final T data;
 
   @override
-  final Map<String, String>? params;
-
-  @override
-  Map<String, Object?> toDebugInfo() {
-    return {
-      'data': data,
-      if (params?.isNotEmpty == true) 'params': params,
-    };
-  }
-
-  @override
-  String get debugName => 'MatchedRoute<$T>';
-
-  @override
-  String toDebugString() => createDebugString(this);
-
-  @override
-  toString() => toDebugString();
+  final Params params;
 }
 
-MethodData<T> createMethodData<T>(T data, [IndexedParams? params]) =>
+MethodData<T> createMethodData<T>(T data, [Iterable<IndexedParam>? params]) =>
     _MethodDataImpl(data, params);
 
 Node<T> createNode<T>(String key) => _NodeImpl<T>(key);
 
-MatchedRoute<T> createMatchedRoute<T>(T data, [Map<String, String>? params]) =>
+MatchedRoute<T> createMatchedRoute<T>(T data, Params params) =>
     _MatchedRouteImpl(data, params);
 
 bool _isNotEmpty(String? element) => element?.isNotEmpty == true;
@@ -149,33 +58,55 @@ String joinPath(Iterable<String> segments) =>
 
 String normalizeMethod(String method) => method.trim().toUpperCase();
 
-Map<String, String>? getMatchParams(
-    Iterable<String> segments, IndexedParams? indexedParams) {
-  if (indexedParams == null) return null;
+Params getMatchParams(
+    Iterable<String> segments, Iterable<IndexedParam>? indexedParams) {
+  final params = _ParamsImpl();
+  if (indexedParams == null || indexedParams.isEmpty) {
+    return params;
+  }
 
-  final params = <String, String>{};
-
-  for (final (index, name) in indexedParams) {
-    final segment = switch (index) {
-      < 0 => joinPath(segments.skip(-1 * index)),
-      _ => segments.elementAtOrNull(index),
+  for (final param in indexedParams) {
+    final value = switch (param.index) {
+      < 0 => joinPath(segments.skip(-1 * param.index)),
+      _ => segments.elementAtOrNull(param.index),
     };
 
-    if (segment == null || segment.isEmpty) continue;
-    if (name is RegExp) {
-      final matches = name.allMatches(segment);
-      for (final match in matches) {
-        final entries =
-            match.groupNames.map((e) => MapEntry(e, match.namedGroup(e)!));
+    if (value == null || value.isEmpty) continue;
 
-        params.addEntries(entries);
-      }
-
-      continue;
+    switch (param) {
+      case NameIndexedParam(name: final name):
+        params.named[name] = value;
+        break;
+      case UnnameIndexedParam _:
+        params.unnamed.add(value);
+      case CatchallIndexedParam(name: final name):
+        params.catchall = value;
+        if (name != null) {
+          params.named[name] = value;
+        }
+        break;
+      case RegExpIndexedParam(regex: final regex):
+        for (final match in regex.allMatches(value)) {
+          final entries =
+              match.groupNames.map((e) => MapEntry(e, match.namedGroup(e)!));
+          params.named.addEntries(entries);
+        }
+        break;
     }
-
-    params[name.toString()] = segment;
   }
 
   return params;
+}
+
+class _ParamsImpl implements Params {
+  final named = <String, String>{};
+
+  @override
+  String? catchall;
+
+  @override
+  String? get(String name) => named[name];
+
+  @override
+  List<String> unnamed = <String>[];
 }

@@ -3,17 +3,12 @@ import '../types.dart';
 
 /// Find all route patterns that match the given path.
 Iterable<MatchedRoute<T>> findAllRoutes<T>(
-    RouterContext<T> context, String method, String path,
-    {bool params = true}) {
+    RouterContext<T> context, String method, String path) {
   final segments = splitPath(path);
   final results = <MethodData<T>>[];
 
   _findAll<T>(
       context, context.root, normalizeMethod(method), segments, 0, results);
-
-  if (!params) {
-    return results.map((e) => createMatchedRoute(e.data));
-  }
 
   return results.map(
       (e) => createMatchedRoute(e.data, getMatchParams(segments, e.params)));
