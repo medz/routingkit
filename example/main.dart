@@ -3,29 +3,25 @@ import 'package:routingkit/routingkit.dart';
 void main() {
   final router = createRouter<String>();
 
-  addRoute(router, 'get', '/path', 'Static path');
-  addRoute(router, 'get', '/path/:name', 'Param route');
-  addRoute(router, 'get', '/path/**', 'Wildcard route');
-  addRoute(router, 'get', '/path/**:name', 'Named wildcard route');
-  addRoute(
-      router, 'get', '/files/:dir/:filename.:format,v:version', 'Mixed route');
+  router.add('get', '/path', 'Static path');
+  router.add('get', '/path/:name', 'Param route');
+  router.add('get', '/path/*', 'Unnamed param route');
+  router.add('get', '/path/**', 'Wildcard Route');
+  router.add('get', '/path/**:rset', 'Named wildcard route');
+  router.add('get', '/files/:dir/:filename.:format,v:version', 'Mixed Route');
 
-  // Static
-  final static = findRoute(router, 'get', '/path')?.lastOrNull;
-  print('GET /path, ${static?.data}');
+  // {data: Static path}
+  print(router.find('get', '/path')?.toMap());
 
-  // Param
-  final paramRoute = findRoute(router, 'get', '/path/seven')?.lastOrNull;
-  print(
-    'GET /path/:name, ${paramRoute?.data}, name: ${paramRoute?.params.get('name')}',
-  );
+  // {data: Param route, params: {name: seven}}
+  print(router.find('get', '/path/seven')?.toMap());
 
-  // Wildcard
-  final wildcard = findRoute(router, "get", "/path/foo/bar/baz")?.lastOrNull;
-  print('GET /path/**, ${wildcard?.data}, ${wildcard?.params.catchall}');
+  // {data: Wildcard Route, params: {_: foo/bar/baz}}
+  print(router.find('get', '/path/foo/bar/baz')?.toMap());
 
-  // Mixed
-  print(findRoute(router, "GET", "/files/pubspec.yaml.dart,v1")
-      ?.lastOrNull
-      ?.data);
+  // {data: Mixed Route, params: {dir: dart, filename: pubspec, format: yaml, version: 1}}
+  print(router.find('get', '/files/dart/pubspec.yaml,v1')?.toMap());
+
+  // `null`, No match.
+  print(router.find('get', '/'));
 }

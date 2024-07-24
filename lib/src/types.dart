@@ -1,78 +1,131 @@
-/// Router context.
-abstract interface class RouterContext<T> {
-  /// Gets a root route node.
-  Node<T> get root;
+/// Method data indexed params.
+typedef IndexedParams = List<(int index, Pattern name, bool optional)>;
 
-  /// Gets static nodes map for current router context.
-  Map<String, Node<T>?> get static;
+/// Mappable interface.
+abstract interface class Mappable {
+  /// Creates a map for the [Mappable] impl.
+  Map<String, dynamic> toMap();
 }
 
-abstract base class IndexedParam {
-  const IndexedParam(this.index);
+/// Method data
+class MethodData<T> implements Mappable {
+  /// Creates a new method data.
+  const MethodData(this.data, this.params);
 
-  final int index;
+  /// Returns method data.
+  final T data;
+
+  /// Returns method data params.
+  final IndexedParams params;
+
+  @override
+  Map<String, dynamic> toMap() => {'data': data, 'params': params};
 }
 
-final class NameIndexedParam extends IndexedParam {
-  const NameIndexedParam(super.index, this.name);
+/// Router node.
+class Node<T> implements Mappable {
+  /// Creates a new router node.
+  Node(this.key, {this.methods, this.static, this.param, this.wildcard});
 
-  final String name;
-}
+  /// The node type key.
+  final String key;
 
-final class RegExpIndexedParam extends IndexedParam {
-  const RegExpIndexedParam(super.index, this.regex);
+  /// The node store method data.
+  Map<String?, List<MethodData<T>>>? methods;
 
-  final RegExp regex;
-}
+  /// The node static children nodes.
+  Map<String, Node<T>>? static;
 
-final class UnnameIndexedParam extends IndexedParam {
-  const UnnameIndexedParam(super.index);
-}
-
-final class CatchallIndexedParam extends IndexedParam {
-  const CatchallIndexedParam(super.index, [this.name]);
-
-  final String? name;
-}
-
-/// Method data.
-abstract interface class MethodData<T> {
-  /// Gets a [T] type data for current method.
-  T get data;
-
-  /// Gets current method params.
-  Iterable<IndexedParam>? get params;
-}
-
-/// Route node.
-abstract interface class Node<T> {
-  /// The node key name.
-  String get key;
-
-  /// Gets static nodes map for current node.
-  Map<String, Node<T>> get static;
-
-  /// gets method data map for current node.
-  Map<String, List<MethodData<T>>?> get methods;
-
-  /// Get/set current params node.
+  /// The node param child node.
   Node<T>? param;
 
-  /// Get/set current wildcard node.
+  /// The node wildcard node.
   Node<T>? wildcard;
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      if (key.isNotEmpty) 'key': key,
+      if (methods?.isNotEmpty == true)
+        'methods': methods
+            ?.map((key, value) => MapEntry(key, value.map((e) => e.toMap()))),
+      if (static?.isNotEmpty == true)
+        'static': static?.map((key, value) => MapEntry(key, value.toMap())),
+      if (param != null) 'param': param?.toMap(),
+      if (wildcard != null) 'wildcard': wildcard?.toMap(),
+    };
+  }
 }
 
-abstract interface class Params {
-  String? get(String name);
-  Iterable<String> get unnamed;
-  String? get catchall;
+/// Router context.
+class Context<T> implements Mappable {
+  Context({required this.root, required this.static});
+
+  /// The root node for context.
+  Node<T> root;
+
+  /// The static nodes map for context.
+  Map<String, Node<T>> static;
+
+  @override
+  Map<String, dynamic> toMap() => {
+        'root': root.toMap(),
+        'static': static.map((key, value) => MapEntry(key, value.toMap())),
+      };
+}
+
+/// Matched route params.
+extension type Params._(Map<String, String> _) implements Map<String, String> {
+  static final _unnamedNameRegex = RegExp(r'^_\d+');
+
+  /// Returns matched unnamed params.
+  Iterable<String> get unmamed => entries
+      .where((e) => _unnamedNameRegex.hasMatch(e.key))
+      .map((e) => e.value);
+
+  /// Returns catchall param.
+  String? get catchall => _['_'];
 }
 
 /// Matched route.
-abstract interface class MatchedRoute<T> {
-  /// Returns a data for current matched route.
-  T get data;
+class MatchedRoute<T> implements Mappable {
+  /// Creates a new mmatched route.
+  const MatchedRoute(this.data, this.params);
 
-  /// Returns a params map for current matched route.
-  Params get params;
+  /// Matched route data.
+  final T data;
+
+  /// Matched route params.
+  final Params params;
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'data': data,
+      if (params.isNotEmpty) 'params': params,
+    };
+  }
+}
+
+/// RoutingKit router.
+abstract interface class Router<T> {
+  /// Returns the router context.
+  Context<T> get context;
+
+  /// Adds a new route.
+  void add(String? method, String path, T data);
+
+  /// Remove a added route.
+  ///
+  /// **NOTE**: Not support named param.
+  void remove(String? method, String path);
+
+  /// Find first added route.
+  MatchedRoute<T>? find(String? method, String path);
+
+  /// Find all added routes.
+  ///
+  /// If the [includeNonMethod] is `true`, the returns result include the [method] is `null` routes.
+  Iterable<MatchedRoute<T>> findAll(String? method, String path,
+      [bool includeNonMethod = false]);
 }

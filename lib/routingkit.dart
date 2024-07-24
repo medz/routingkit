@@ -3,10 +3,5 @@
 /// ![Pub version](https://img.shields.io/pub/v/routingkit?logo=dart)
 library routingkit;
 
-export 'src/context.dart';
 export 'src/types.dart';
-
-export 'src/utils/add.dart';
-export 'src/utils/find.dart';
-export 'src/utils/find_all.dart';
-export 'src/utils/remove.dart';
+export 'src/create_router.dart';

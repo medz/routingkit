@@ -35,26 +35,31 @@ import from "routingkit";
 
 const router = createRouter();
 
-addRoute(router, "GET", "/path", 'this path');
-addRoute(router, "POST", "/path/:name", 'named route');
-addRoute(router, "GET", "/path/foo/**", 'wildcard route');
-addRoute(router, "GET", "/path/foo/**:name", 'named wildcard route');
+router.add('get', '/path', 'Static path');
+router.add('get', '/path/:name', 'Param route');
+router.add('get', '/path/*', 'Unnamed param route');
+router.add('get', '/path/**', 'Wildcard Route');
+router.add('get', '/path/**:rset', 'Named wildcard route');
+router.add('get', '/files/:dir/:filename.:format,v:version', 'Mixed Route');
 ```
 
 ### Match route to access matched data
 
 ```dart
-// Returns [{data: 'This path'}]
-findRoute(router, "GET", "/path");
+// {data: Static path}
+print(router.find('get', '/path')?.toMap());
 
-// Returns [{ data: 'named route', params: { name: 'fooval' } }]
-findRoute(router, "POST", "/path/fooval");
+// {data: Param route, params: {name: seven}}
+print(router.find('get', '/path/seven')?.toMap());
 
-// Returns [{ data: 'wildcard route' }]
-findRoute(router, "GET", "/path/foo/bar/baz");
+// {data: Wildcard Route, params: {_: foo/bar/baz}}
+print(router.find('get', '/path/foo/bar/baz')?.toMap());
 
-// Returns undefined (no route matched for/)
-findRoute(router, "GET", "/");
+// {data: Mixed Route, params: {dir: dart, filename: pubspec, format: yaml, version: 1}}
+print(router.find('get', '/files/dart/pubspec.yaml,v1')?.toMap());
+
+// `null`, No match.
+print(router.find('get', '/'));
 ```
 
 ## License
