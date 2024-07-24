@@ -47,19 +47,19 @@ router.add('get', '/files/:dir/:filename.:format,v:version', 'Mixed Route');
 
 ```dart
 // {data: Static path}
-print(router.find('get', '/path')?.toMap());
+router.find('get', '/path')
 
 // {data: Param route, params: {name: seven}}
-print(router.find('get', '/path/seven')?.toMap());
+router.find('get', '/path/seven')
 
 // {data: Wildcard Route, params: {_: foo/bar/baz}}
-print(router.find('get', '/path/foo/bar/baz')?.toMap());
+router.find('get', '/path/foo/bar/baz')
 
 // {data: Mixed Route, params: {dir: dart, filename: pubspec, format: yaml, version: 1}}
-print(router.find('get', '/files/dart/pubspec.yaml,v1')?.toMap());
+router.find('get', '/files/dart/pubspec.yaml,v1')
 
 // `null`, No match.
-print(router.find('get', '/'));
+router.find('get', '/')
 ```
 
 ## License
