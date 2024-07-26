@@ -1,3 +1,3 @@
-## v3.0.2
+## v3.0.3
 
-* None
+* **fix**: Index out of range: no indices are valid

@@ -17,9 +17,10 @@ Params toParams(IndexedParams params, Iterable<String> segments) {
   for (final (index, pattern, _) in params) {
     final value = switch (index) {
       < 0 => joinPath(segments.skip(-1 * index)),
-      _ => segments.elementAt(index),
+      _ => segments.elementAtOrNull(index),
     };
 
+    if (value == null) continue;
     if (pattern is RegExp) {
       for (final match in pattern.allMatches(value)) {
         result.addEntries(
