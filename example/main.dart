@@ -24,4 +24,6 @@ void main() {
 
   // `null`, No match.
   print(router.find('get', '/'));
+
+  print(router.findAll('get', '/path/seven').map((e) => e.toMap()));
 }
