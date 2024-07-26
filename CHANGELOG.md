@@ -1,3 +1,26 @@
+# Routing Kit v3.0.1
+
+To install Routing Kit v3.0.1 run this command:
+
+```bash
+# Dart project:
+dart pub add routingkit
+
+# Flutter project:
+flutter pub add routingkit
+```
+
+or update your pubspec.yaml file:
+
+```yaml
+dependencies:
+  routingkit: ^3.0.1
+```
+
+## What's Changed
+
+* Fixed `findAll`
+
 # Routing Kit v3.0.0
 
 To install Routing Kit v3.0.0 run this command:
