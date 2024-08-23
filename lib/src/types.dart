@@ -126,6 +126,5 @@ abstract interface class Router<T> {
   /// Find all added routes.
   ///
   /// If the [includeNonMethod] is `true`, the returns result include the [method] is `null` routes.
-  Iterable<MatchedRoute<T>> findAll(String? method, String path,
-      [bool includeNonMethod = false]);
+  Iterable<MatchedRoute<T>> findAll(String? method, String path);
 }
