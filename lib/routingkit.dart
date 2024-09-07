@@ -4,4 +4,9 @@
 library routingkit;
 
 export 'src/types.dart';
-export 'src/create_router.dart';
+export 'src/context.dart';
+
+export 'src/operations/add_route.dart';
+export 'src/operations/find_all_routes.dart';
+export 'src/operations/find_route.dart';
+export 'src/operations/remove_route.dart';
