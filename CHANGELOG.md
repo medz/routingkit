@@ -1,4 +1,8 @@
 
+## v4.0.1
+
+[compare changes](https://github.com/medz/routingkit/compare/v0.0.1...v4.0.1)
+
 ## v0.0.1
 
 [compare changes](https://github.com/medz/routingkit/compare/v3.0.3...v0.0.1)
