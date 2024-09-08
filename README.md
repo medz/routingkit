@@ -31,35 +31,35 @@ flutter pub add routingkit
 ### Create a router instance and insert routes
 
 ```dart
-import from "routingkit";
+import "routingkit";
 
 const router = createRouter();
 
-router.add('get', '/path', 'Static path');
-router.add('get', '/path/:name', 'Param route');
-router.add('get', '/path/*', 'Unnamed param route');
-router.add('get', '/path/**', 'Wildcard Route');
-router.add('get', '/path/**:rset', 'Named wildcard route');
-router.add('get', '/files/:dir/:filename.:format,v:version', 'Mixed Route');
+addRoute(router, 'get', '/path', 'Static path');
+addRoute(router, 'get', '/path/:name', 'Param route');
+addRoute(router, 'get', '/path/*', 'Unnamed param route');
+addRoute(router, 'get', '/path/**', 'Wildcard Route');
+addRoute(router, 'get', '/path/**:rset', 'Named wildcard route');
+addRoute(router, 'get', '/files/:dir/:filename.:format,v:version', 'Mixed Route');
 ```
 
 ### Match route to access matched data
 
 ```dart
 // {data: Static path}
-router.find('get', '/path')
+findRoute(router, 'get', '/path')
 
 // {data: Param route, params: {name: seven}}
-router.find('get', '/path/seven')
+findRoute(router, 'get', '/path/seven')
 
 // {data: Wildcard Route, params: {_: foo/bar/baz}}
-router.find('get', '/path/foo/bar/baz')
+findRoute(router, 'get', '/path/foo/bar/baz')
 
 // {data: Mixed Route, params: {dir: dart, filename: pubspec, format: yaml, version: 1}}
-router.find('get', '/files/dart/pubspec.yaml,v1')
+findRoute(router, 'get', '/files/dart/pubspec.yaml,v1')
 
 // `null`, No match.
-router.find('get', '/')
+findRoute(router, 'get', '/')
 ```
 
 ## License
