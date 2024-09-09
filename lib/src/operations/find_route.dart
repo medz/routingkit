@@ -14,7 +14,7 @@ MatchedRoute<T>? findRoute<T>(
   // 0. global static matched.
   if (ctx.static[normalizedPath]
       case Node<T>(methods: final Map<String, List<MethodData<T>>> methodMap)) {
-    final values = methodMap[method] ?? methodMap[''];
+    final values = methodMap[method] ?? methodMap[ctx.allMethodMark];
     if (values?.firstOrNull?.data case final data when data is T) {
       return MatchedRoute(data: data);
     }
@@ -40,14 +40,16 @@ Iterable<MethodData<T>>? _lookupTree<T>(
   // 0. Ends
   if (index == segments.length) {
     if (node.methods != null) {
-      final values = node.methods?[method] ?? node.methods?[''];
+      final values = node.methods?[method] ?? node.methods?[ctx.allMethodMark];
       if (values != null) return values;
     }
 
     // Fallback to dynamic for last child (/test and /test/ matches /test/*)
     if (node.param case Node<T>(methods: final methodMap)
         when methodMap != null) {
-      final values = methodMap[method] ?? methodMap[''];
+      final values = methodMap[method] ?? methodMap[ctx.allMethodMark];
+
+      // The reason for only checking first here is that findRoute only returns the first match.
       if (values != null &&
           values.firstOrNull?.params?.lastOrNull?.optional == true) {
         return values;
@@ -56,7 +58,9 @@ Iterable<MethodData<T>>? _lookupTree<T>(
 
     if (node.wildcard case Node<T>(methods: final methodMap)
         when methodMap != null) {
-      final values = methodMap[method] ?? methodMap[''];
+      final values = methodMap[method] ?? methodMap[ctx.allMethodMark];
+
+      // The reason for only checking first here is that findRoute only returns the first match.
       if (values != null &&
           values.firstOrNull?.params?.lastOrNull?.optional == true) {
         return values;
@@ -83,7 +87,7 @@ Iterable<MethodData<T>>? _lookupTree<T>(
   // 3. wildcard
   if (node.wildcard case Node<T>(methods: final methodMap)
       when methodMap != null) {
-    return methodMap[method] ?? methodMap[''];
+    return methodMap[method] ?? methodMap[ctx.allMethodMark];
   }
 
   // No match

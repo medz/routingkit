@@ -31,7 +31,7 @@ Iterable<MethodData<T>> _findAllMethodData<T>(
   // 0. wildcard
   if (node.wildcard?.methods
       case final Map<String, List<MethodData<T>>> methodMap) {
-    final values = methodMap[method] ?? methodMap[''];
+    final values = methodMap[method] ?? methodMap[ctx.allMethodMark];
     if (values != null && values.isNotEmpty) {
       results.addAll(values);
     }
@@ -42,10 +42,11 @@ Iterable<MethodData<T>> _findAllMethodData<T>(
     results.addAll(_findAllMethodData(ctx, node, method, segments, index + 1));
     if (node.methods case final Map<String, List<MethodData<T>>> methodMap
         when index == segments.length) {
-      final values = methodMap[method] ?? methodMap[''];
-      if (values != null &&
-          values.firstOrNull?.params?.lastOrNull?.optional == true) {
-        results.addAll(values);
+      final values = methodMap[method] ?? methodMap[ctx.allMethodMark];
+      final optionalValues =
+          values?.where((e) => e.params?.any((e) => e.optional) == true);
+      if (optionalValues != null) {
+        results.addAll(optionalValues);
       }
     }
   }
@@ -58,7 +59,7 @@ Iterable<MethodData<T>> _findAllMethodData<T>(
   // 3. ends.
   if (node.methods case final Map<String, List<MethodData<T>>> methodMap
       when index == segments.length) {
-    final values = methodMap[method] ?? methodMap[''];
+    final values = methodMap[method] ?? methodMap[ctx.allMethodMark];
     if (values != null && values.isNotEmpty) {
       results.addAll(values);
     }

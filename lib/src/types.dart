@@ -5,6 +5,9 @@ abstract interface class RouterContext<T> {
 
   /// all path segment is statice nodes.
   Map<String, Node<T>> get static;
+
+  /// Defined all http method mark.
+  String get allMethodMark;
 }
 
 /// Method data params metadata.
