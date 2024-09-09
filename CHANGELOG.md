@@ -1,3 +1,7 @@
+## v4.1.0
+
+- **feat**: Support nullable method.
+
 ## v4.0.0
 
 [compare changes](https://github.com/medz/routingkit/compare/v3.0.3...v4.0.0)

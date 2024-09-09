@@ -4,7 +4,7 @@ import '../types.dart';
 /// Find all route patterns that match the given [path].
 Iterable<MatchedRoute<T>> findAllRoutes<T>(
   RouterContext<T> ctx,
-  String method,
+  String? method,
   String path, {
   bool params = true,
 }) {
@@ -22,7 +22,7 @@ Iterable<MatchedRoute<T>> findAllRoutes<T>(
 Iterable<MethodData<T>> _findAllMethodData<T>(
   RouterContext<T> ctx,
   Node<T> node,
-  String method,
+  String? method,
   Iterable<String> segments,
   int index,
 ) {
@@ -31,7 +31,7 @@ Iterable<MethodData<T>> _findAllMethodData<T>(
   // 0. wildcard
   if (node.wildcard?.methods
       case final Map<String, List<MethodData<T>>> methodMap) {
-    final values = methodMap[method] ?? methodMap[ctx.allMethodMark];
+    final values = methodMap[method] ?? methodMap[''];
     if (values != null && values.isNotEmpty) {
       results.addAll(values);
     }
@@ -42,7 +42,7 @@ Iterable<MethodData<T>> _findAllMethodData<T>(
     results.addAll(_findAllMethodData(ctx, node, method, segments, index + 1));
     if (node.methods case final Map<String, List<MethodData<T>>> methodMap
         when index == segments.length) {
-      final values = methodMap[method] ?? methodMap[ctx.allMethodMark];
+      final values = methodMap[method] ?? methodMap[''];
       final optionalValues =
           values?.where((e) => e.params?.any((e) => e.optional) == true);
       if (optionalValues != null) {
@@ -59,7 +59,7 @@ Iterable<MethodData<T>> _findAllMethodData<T>(
   // 3. ends.
   if (node.methods case final Map<String, List<MethodData<T>>> methodMap
       when index == segments.length) {
-    final values = methodMap[method] ?? methodMap[ctx.allMethodMark];
+    final values = methodMap[method] ?? methodMap[''];
     if (values != null && values.isNotEmpty) {
       results.addAll(values);
     }

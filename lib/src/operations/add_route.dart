@@ -3,7 +3,7 @@ import '../_internal/utils.dart';
 import '../types.dart';
 
 /// Adds a route to the router context.
-void addRoute<T>(RouterContext<T> ctx, String method, String path, T data) {
+void addRoute<T>(RouterContext<T> ctx, String? method, String path, T data) {
   final segments = toPathSegments(path);
   final ParamsMetadata params = [];
 
@@ -44,7 +44,7 @@ void addRoute<T>(RouterContext<T> ctx, String method, String path, T data) {
   }
 
   // Assign params and data to the node.
-  (node.methods ??= {}).putIfAbsent(method, () => []).add(MethodData(
+  (node.methods ??= {}).putIfAbsent(method ?? '', () => []).add(MethodData(
         data: data,
         params: params.isNotEmpty ? params : null,
       ));
