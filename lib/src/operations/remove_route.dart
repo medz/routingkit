@@ -1,7 +1,15 @@
 import '../_internal/utils.dart';
 import '../types.dart';
 
-/// Remove a route from the router context.
+/// Removes a specific route from the router context.
+///
+/// [ctx] The router context to remove the route from.
+/// [method] The HTTP method of the route to remove.
+/// [path] The path of the route to remove.
+///
+/// This function traverses the routing tree and removes the specified route.
+/// If removing the route results in empty nodes, those nodes will also be removed
+/// to keep the routing tree optimized.
 void removeRoute<T>(RouterContext<T> ctx, String method, String path) {
   return _remove(ctx.root, method, toPathSegments(path), 0);
 }

@@ -1,7 +1,16 @@
 import '../_internal/utils.dart';
 import '../types.dart';
 
-/// Find a route.
+/// Finds the first matching route for the given path and method.
+///
+/// [ctx] The router context to search in.
+/// [method] The HTTP method to match. If null, matches any method.
+/// [path] The path to match against.
+/// [params] Whether to include matched parameters in the result. Defaults to true.
+///
+/// Returns a [MatchedRoute<T>] if a match is found, or null if no match is found.
+/// The [MatchedRoute] includes the associated data and, if [params] is true,
+/// any matched path parameters.
 MatchedRoute<T>? findRoute<T>(
   RouterContext<T> ctx,
   String? method,

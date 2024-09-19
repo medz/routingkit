@@ -2,7 +2,15 @@ import '../_internal/node_impl.dart';
 import '../_internal/utils.dart';
 import '../types.dart';
 
-/// Adds a route to the router context.
+/// Adds a new route to the router context.
+///
+/// [ctx] The router context to add the route to.
+/// [method] The HTTP method for this route (e.g., 'GET', 'POST'). If null, matches any method.
+/// [path] The path pattern for this route.
+/// [data] The data associated with this route.
+///
+/// This function handles static routes, parameterized routes, and wildcard routes.
+/// It updates the routing tree structure and adds appropriate metadata for route matching.
 void addRoute<T>(RouterContext<T> ctx, String? method, String path, T data) {
   final segments = toPathSegments(path);
   final ParamsMetadata params = [];

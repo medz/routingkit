@@ -1,7 +1,14 @@
 import '../_internal/utils.dart';
 import '../types.dart';
 
-/// Find all route patterns that match the given [path].
+/// Finds all routes that match the given [path] and [method].
+///
+/// [ctx] is the router context to search in.
+/// [method] is the HTTP method to match (e.g., 'GET', 'POST'). If null, matches all methods.
+/// [path] is the URL path to match against.
+/// [params] determines whether to extract and return route parameters. Defaults to true.
+///
+/// Returns an [Iterable] of [MatchedRoute<T>] containing all matching routes.
 Iterable<MatchedRoute<T>> findAllRoutes<T>(
   RouterContext<T> ctx,
   String? method,
