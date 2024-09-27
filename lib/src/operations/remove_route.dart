@@ -40,7 +40,7 @@ void _remove<T>(
   }
 
   // wildcard
-  if (segment == "**") {
+  if (segment?.startsWith('**') == true) {
     if (node.wildcard != null) {
       _remove(node.wildcard!, method, segments, index + 1);
       if (_isEmpry(node.wildcard!)) {
