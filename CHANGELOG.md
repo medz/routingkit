@@ -1,3 +1,8 @@
+## v4.1.1
+
+- **fix**: fix: remove named wildcard routes
+- **chrome**: bump lints from 4.0.0 to 5.1.0
+
 ## v4.1.0
 
 - **feat**: Support nullable method.
