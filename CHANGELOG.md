@@ -1,3 +1,9 @@
+## 5.1.1
+
+### Documentation
+
+- Improved pubspec.yaml with more descriptive information and optimized topics
+
 ## 5.1.0
 
 ### New Features
