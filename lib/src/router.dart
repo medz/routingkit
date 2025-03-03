@@ -399,7 +399,6 @@ class Router<T> {
     int index,
   ) {
     final matches = <_RouteData<T>>[];
-    final currentPath = _segmentsToPath(segments.sublist(0, index));
 
     // When reaching the end of the path
     if (index == segments.length) {

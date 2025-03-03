@@ -3,7 +3,7 @@ description: >-
   Routing Kit
    - Lightweight and fast router.
    - A composable pure function routing kit.
-version: 5.0.0
+version: 5.0.1
 repository: https://github.com/medz/routingkit
 
 funding:

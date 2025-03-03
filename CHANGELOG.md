@@ -1,3 +1,11 @@
+## 5.0.1
+
+### Bug Fixes
+
+- Fixed duplicated results in `findAll` method by implementing a deduplication mechanism
+- Added configurable `anyMethodToken` parameter to `createRouter` function with a default value of 'routerkit-method://any'
+- Enhanced wildcard and parameter matching with more reliable route priority handling
+
 ## 5.0.0
 
 ### Breaking Changes
