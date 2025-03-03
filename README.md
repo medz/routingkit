@@ -111,6 +111,20 @@ router.remove('GET', '/users/:id');
 router.remove('POST', null);
 ```
 
+### HTTP Method Handling
+
+RoutingKit automatically normalizes HTTP methods to uppercase. This means that methods like 'get', 'GET', or 'Get' are all treated as 'GET'. This follows the HTTP specification and makes the router more robust.
+
+```dart
+router.add('get', '/users', 'get-users');  // Will be normalized to 'GET'
+router.add('POST', '/users', 'post-users'); // Will be normalized to 'POST'
+
+// All these will match the same route
+router.find('get', '/users');   // Matches
+router.find('GET', '/users');   // Matches
+router.find('Get', '/users');   // Matches
+```
+
 ## Example Applications
 
 ### HTTP Server Routing

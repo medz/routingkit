@@ -21,7 +21,43 @@ class Router<T> {
   /// [path] Route path pattern
   /// [data] Data associated with this route
   void add(String? method, String path, T data) {
-    final segments = _pathToSegments(path);
+    // Normalize HTTP method to uppercase
+    final normalizedMethod = method?.toUpperCase();
+
+    // Special handling for optional format parameters like ':filename.:format?'
+    String processedPath = path;
+    Map<String, String>? formatParams;
+
+    if (path.contains('.') && path.contains(':') && path.contains('?')) {
+      // We might have a path with format parameter like '/files/:filename.:format?'
+      final parts = path.split('/');
+      for (int i = 0; i < parts.length; i++) {
+        final part = parts[i];
+        if (part.startsWith(':') && part.contains('.') && part.contains('?')) {
+          // Found a potential format parameter segment
+          final paramParts = part.split('.');
+          if (paramParts.length == 2 && paramParts[1].endsWith('?')) {
+            // We have ':name.:format?' pattern
+            final paramName = paramParts[0];
+            final formatParam =
+                paramParts[1].substring(0, paramParts[1].length - 1);
+
+            // Replace with a simple parameter for the router
+            parts[i] = paramName;
+
+            // Store format information for later use
+            formatParams = {
+              'paramIndex': i.toString(),
+              'formatName': formatParam,
+              'isOptional': 'true'
+            };
+          }
+        }
+      }
+      processedPath = parts.join('/');
+    }
+
+    final segments = _pathToSegments(processedPath);
     final params = <_ParamInfo>[];
 
     var node = _root;
@@ -31,11 +67,16 @@ class Router<T> {
       // Handle wildcard path segment (like ** or **:name)
       if (segment.startsWith('**')) {
         node = node.wildcard ??= _RouterNode('**');
+        final wildcardName =
+            segment.contains(':') ? segment.split(':')[1] : '_';
         params.add(_ParamInfo(
           index: index,
-          name: segment.split(':').elementAtOrNull(1) ?? '_',
-          optional: segment.length == 2,
+          name: wildcardName,
+          optional: false, // Wildcards are always required
         ));
+
+        // Important: For wildcard segments, we stop traversing
+        // as the wildcard captures all remaining segments
         break;
       }
 
@@ -57,14 +98,39 @@ class Router<T> {
       node = node.static.putIfAbsent(segment, () => _RouterNode(segment));
     }
 
+    // Add format parameter information if present
+    if (formatParams != null) {
+      // Add a special parameter that indicates this is a format parameter
+      final paramIndexStr = formatParams['paramIndex']!;
+      final paramIndex = int.parse(paramIndexStr);
+      final formatName = formatParams['formatName']!;
+      final isOptional = formatParams['isOptional'] == 'true';
+
+      // Find the parameter at the specified index
+      for (final param in params) {
+        if (param.index == paramIndex) {
+          // Add format information to this parameter
+          param.formatInfo = {
+            'name': formatName,
+            'optional': isOptional.toString()
+          };
+          break;
+        }
+      }
+    }
+
     // Add route data to the node
     final routeData = _RouteData(
       data: data,
       params: params.isNotEmpty ? params : null,
     );
 
-    (node.methods ??= {})[method ?? ''] =
-        ((node.methods?[method ?? ''] ?? [])..add(routeData));
+    // Only add the route if it doesn't already exist for this method
+    if (!(node.methods?[normalizedMethod ?? '']?.any((r) => r.data == data) ??
+        false)) {
+      (node.methods ??= {})[normalizedMethod ?? ''] =
+          ((node.methods?[normalizedMethod ?? ''] ?? [])..add(routeData));
+    }
 
     // If it's a pure static path, add to static route mapping
     if (params.isEmpty) {
@@ -81,6 +147,8 @@ class Router<T> {
   /// Returns [MatchedRoute<T>] if a match is found, null otherwise
   MatchedRoute<T>? find(String? method, String path,
       {bool includeParams = true}) {
+    // Normalize HTTP method to uppercase
+    final normalizedMethod = method?.toUpperCase();
     final segments = _pathToSegments(path);
     final normalizedPath = _segmentsToPath(segments);
 
@@ -89,7 +157,7 @@ class Router<T> {
       final node = _staticRoutes[normalizedPath]!;
 
       // First check for exact method match
-      final methodValues = node.methods?[method];
+      final methodValues = node.methods?[normalizedMethod];
       if (methodValues != null && methodValues.isNotEmpty) {
         return MatchedRoute(
           data: methodValues.first.data,
@@ -112,7 +180,8 @@ class Router<T> {
     }
 
     // 2. Look in the route tree
-    final match = _findInTree(_root, method, segments, 0)?.firstOrNull;
+    final match =
+        _findInTree(_root, normalizedMethod, segments, 0)?.firstOrNull;
     if (match == null) return null;
 
     return MatchedRoute(
@@ -130,6 +199,8 @@ class Router<T> {
   /// Returns a list of all matching routes
   List<MatchedRoute<T>> findAll(String? method, String path,
       {bool includeParams = true}) {
+    // Normalize HTTP method to uppercase
+    final normalizedMethod = method?.toUpperCase();
     final segments = _pathToSegments(path);
     final normalizedPath = _segmentsToPath(segments);
     final result = <MatchedRoute<T>>[];
@@ -139,9 +210,9 @@ class Router<T> {
       final node = _staticRoutes[normalizedPath]!;
 
       // Add exact method matches
-      if (method != null) {
-        _addMatchedRoutes(
-            result, node.methods?[method] ?? [], segments, includeParams);
+      if (normalizedMethod != null) {
+        _addMatchedRoutes(result, node.methods?[normalizedMethod] ?? [],
+            segments, includeParams);
       }
 
       // Add wildcard method matches (method is '')
@@ -149,7 +220,7 @@ class Router<T> {
           result, node.methods?[''] ?? [], segments, includeParams);
 
       // If request method is null, add routes for all methods
-      if (method == null && node.methods != null) {
+      if (normalizedMethod == null && node.methods != null) {
         for (final entry in node.methods!.entries) {
           if (entry.key.isNotEmpty) {
             // Skip wildcard method since it's already added
@@ -160,7 +231,7 @@ class Router<T> {
     }
 
     // 2. Collect all matches from the route tree
-    final matches = _collectMatches(_root, method, segments, 0);
+    final matches = _collectMatches(_root, normalizedMethod, segments, 0);
     for (final match in matches) {
       result.add(MatchedRoute(
         data: match.data,
@@ -179,13 +250,15 @@ class Router<T> {
   ///
   /// Returns whether a route was removed
   bool remove(String? method, String path, [T? data]) {
+    // Normalize HTTP method to uppercase
+    final normalizedMethod = method?.toUpperCase();
     final segments = _pathToSegments(path);
     final normalizedPath = _segmentsToPath(segments);
 
     // 1. Check static routes
     if (_staticRoutes.containsKey(normalizedPath)) {
       final node = _staticRoutes[normalizedPath]!;
-      final removed = _removeFromNode(node, method, data);
+      final removed = _removeFromNode(node, normalizedMethod, data);
       if (removed && node.isEmpty) {
         _staticRoutes.remove(normalizedPath);
       }
@@ -193,7 +266,7 @@ class Router<T> {
     }
 
     // 2. Remove from the route tree
-    return _removeFromTree(_root, method, segments, 0, data);
+    return _removeFromTree(_root, normalizedMethod, segments, 0, data);
   }
 
   // Internal method: Add route data to result list
@@ -237,76 +310,60 @@ class Router<T> {
         if (method == null) {
           return null;
         }
-
-        return null;
       }
-
-      // 2. Check parameter node (optional parameter)
-      if (node.param != null && node.param!.methods != null) {
-        // Same logic as above
-        List<_RouteData<T>>? values;
-        if (method != null && node.param!.methods!.containsKey(method)) {
-          values = node.param!.methods![method];
-        } else if (node.param!.methods!.containsKey('')) {
-          values = node.param!.methods![''];
-        } else {
-          return null;
-        }
-
-        if (values != null && _hasOptionalLastParam(values)) {
-          return values;
-        }
-      }
-
-      // 3. Check wildcard node (optional parameter)
-      if (node.wildcard != null && node.wildcard!.methods != null) {
-        // Same logic as above
-        List<_RouteData<T>>? values;
-        if (method != null && node.wildcard!.methods!.containsKey(method)) {
-          values = node.wildcard!.methods![method];
-        } else if (node.wildcard!.methods!.containsKey('')) {
-          values = node.wildcard!.methods![''];
-        } else {
-          return null;
-        }
-
-        return values;
-      }
-
       return null;
     }
 
     final segment = segments[index];
+    final matches = <_RouteData<T>>[];
 
-    // 1. Check static node
+    // 1. Try static match - highest priority
     if (node.static.containsKey(segment)) {
-      final result =
-          _findInTree(node.static[segment]!, method, segments, index + 1);
-      if (result != null) return result;
-    }
-
-    // 2. Check parameter node
-    if (node.param != null) {
-      final result = _findInTree(node.param!, method, segments, index + 1);
-      if (result != null) return result;
-    }
-
-    // 3. Check wildcard node
-    if (node.wildcard != null && node.wildcard!.methods != null) {
-      // Same logic as above
-      List<_RouteData<T>>? values;
-      if (method != null && node.wildcard!.methods!.containsKey(method)) {
-        values = node.wildcard!.methods![method];
-      } else if (node.wildcard!.methods!.containsKey('')) {
-        values = node.wildcard!.methods![''];
-      } else {
-        return null;
+      final staticMatch = _findInTree(
+        node.static[segment]!,
+        method,
+        segments,
+        index + 1,
+      );
+      if (staticMatch != null) {
+        matches.addAll(staticMatch);
+        // If we found a static match, return it immediately for correct priority
+        return matches.isNotEmpty ? matches : null;
       }
-
-      return values;
     }
 
-    return null;
+    // 2. Try parameter match - medium priority
+    if (node.param != null && matches.isEmpty) {
+      final paramMatch = _findInTree(
+        node.param!,
+        method,
+        segments,
+        index + 1,
+      );
+      if (paramMatch != null) {
+        matches.addAll(paramMatch);
+        // If we found a parameter match, return it immediately if no static match
+        return matches.isNotEmpty ? matches : null;
+      }
+    }
+
+    // 3. Try wildcard match - lowest priority
+    if (node.wildcard != null && matches.isEmpty) {
+      // For wildcard match, we need to handle the remaining segments
+      if (node.wildcard!.methods != null) {
+        // First check for exact method match
+        if (method != null && node.wildcard!.methods!.containsKey(method)) {
+          return node.wildcard!.methods![method];
+        }
+
+        // Then check for wildcard method match (method is '')
+        if (node.wildcard!.methods!.containsKey('')) {
+          return node.wildcard!.methods![''];
+        }
+      }
+    }
+
+    return matches.isNotEmpty ? matches : null;
   }
 
   // Internal method: Collect all matches from the route tree
@@ -316,105 +373,106 @@ class Router<T> {
     List<String> segments,
     int index,
   ) {
-    final result = <_RouteData<T>>[];
+    final matches = <_RouteData<T>>[];
 
     // When reaching the end of the path
     if (index == segments.length) {
-      // Check current node methods
-      _addMethodMatches(result, node, method);
+      // 1. Check current node
+      if (node.methods != null) {
+        // Add exact method matches
+        if (method != null && node.methods!.containsKey(method)) {
+          matches.addAll(node.methods![method] ?? []);
+        }
 
-      // Check parameter node methods (optional parameter)
-      if (node.param != null) {
-        _addMethodMatches(result, node.param!, method);
+        // Add wildcard method matches (method is '')
+        if (node.methods!.containsKey('')) {
+          matches.addAll(node.methods![''] ?? []);
+        }
+
+        // If method is null, add all method matches
+        if (method == null && node.methods != null) {
+          for (final entry in node.methods!.entries) {
+            if (entry.key.isNotEmpty) {
+              // Skip wildcard method since it's already added
+              matches.addAll(entry.value);
+            }
+          }
+        }
       }
-
-      // Check wildcard node methods
-      if (node.wildcard != null) {
-        _addMethodMatches(result, node.wildcard!, method);
-      }
-
-      return result;
+      return matches;
     }
 
     final segment = segments[index];
+    final staticMatches = <_RouteData<T>>[];
+    final paramMatches = <_RouteData<T>>[];
+    final wildcardMatches = <_RouteData<T>>[];
 
-    // 1. Check if static path exists and recurse
+    // 1. Try static match
     if (node.static.containsKey(segment)) {
-      result.addAll(
-          _collectMatches(node.static[segment]!, method, segments, index + 1));
+      staticMatches.addAll(_collectMatches(
+        node.static[segment]!,
+        method,
+        segments,
+        index + 1,
+      ));
     }
 
-    // 2. Check parameter match and recurse
+    // 2. Try parameter match
     if (node.param != null) {
-      result.addAll(_collectMatches(node.param!, method, segments, index + 1));
+      paramMatches.addAll(_collectMatches(
+        node.param!,
+        method,
+        segments,
+        index + 1,
+      ));
     }
 
-    // 3. Check wildcard match
+    // 3. Try wildcard match
     if (node.wildcard != null) {
-      _addMethodMatches(result, node.wildcard!, method);
+      // For wildcard match in collection, check if we have methods
+      if (node.wildcard!.methods != null) {
+        // Add exact method matches
+        if (method != null && node.wildcard!.methods!.containsKey(method)) {
+          wildcardMatches.addAll(node.wildcard!.methods![method] ?? []);
+        }
+
+        // Add wildcard method matches (method is '')
+        if (node.wildcard!.methods!.containsKey('')) {
+          wildcardMatches.addAll(node.wildcard!.methods![''] ?? []);
+        }
+      }
     }
 
-    return result;
+    // Add matches in order of priority: static, parameter, wildcard
+    matches.addAll(staticMatches);
+    matches.addAll(paramMatches);
+    matches.addAll(wildcardMatches);
+
+    return matches;
   }
 
-  // Helper method to add method matches to result
-  void _addMethodMatches(
-    List<_RouteData<T>> result,
-    _RouterNode<T> node,
-    String? method,
-  ) {
-    if (node.methods == null) return;
-
-    // Add exact method matches
-    if (method != null && node.methods!.containsKey(method)) {
-      result.addAll(node.methods![method]!);
-    }
-
-    // Add wildcard method matches
-    if (node.methods!.containsKey('')) {
-      result.addAll(node.methods!['']!);
-    }
-  }
-
-  // Internal method: Remove from node
+  // Internal method: Remove route data from a node
   bool _removeFromNode(_RouterNode<T> node, String? method, T? data) {
     if (node.methods == null) return false;
 
-    // Method to remove (null becomes '' in the map)
-    final methodKey = method ?? '';
+    final methodValues = node.methods![method ?? ''];
+    if (methodValues == null) return false;
 
-    // If there's no entry for this method, nothing to remove
-    if (!node.methods!.containsKey(methodKey)) return false;
+    final initialLength = methodValues.length;
+    methodValues.removeWhere((r) => data == null || r.data == data);
 
-    // If data is provided, remove specific data entry
-    if (data != null) {
-      final routes = node.methods![methodKey]!;
-      final initialLength = routes.length;
-      node.methods![methodKey] = routes.where((r) => r.data != data).toList();
-
-      // Check if any route was removed
-      final removed = initialLength > node.methods![methodKey]!.length;
-      // Clean up empty lists
-      if (node.methods![methodKey]!.isEmpty) {
-        node.methods!.remove(methodKey);
-      }
-      // Clean up empty methods map
-      if (node.methods!.isEmpty) {
-        node.methods = null;
-      }
-      return removed;
-    } else {
-      // Remove all routes for this method
-      node.methods!.remove(methodKey);
-      // Clean up empty methods map
-      if (node.methods!.isEmpty) {
-        node.methods = null;
-      }
-      return true;
+    if (methodValues.isEmpty) {
+      node.methods!.remove(method ?? '');
     }
+
+    if (node.methods!.isEmpty) {
+      node.methods = null;
+    }
+
+    return methodValues.length < initialLength;
   }
 
-  // Internal method: Remove from tree
+  // Internal method: Remove route data from the route tree
   bool _removeFromTree(
     _RouterNode<T> node,
     String? method,
@@ -428,139 +486,242 @@ class Router<T> {
     }
 
     final segment = segments[index];
-    bool removed = false;
 
-    // 1. Try to remove from static node
-    if (segment != '*' && segment != '**' && !segment.startsWith(':')) {
-      if (node.static.containsKey(segment)) {
-        removed = _removeFromTree(
-            node.static[segment]!, method, segments, index + 1, data);
-
-        // Clean up static node if empty
-        if (node.static[segment]!.isEmpty) {
-          node.static.remove(segment);
-        }
-
-        return removed;
+    // 1. Try static match
+    if (node.static.containsKey(segment)) {
+      final removed = _removeFromTree(
+        node.static[segment]!,
+        method,
+        segments,
+        index + 1,
+        data,
+      );
+      if (removed && node.static[segment]!.isEmpty) {
+        node.static.remove(segment);
       }
+      if (removed) return true;
     }
 
-    // 2. Try to remove from parameter node
-    if (segment == '*' || segment.startsWith(':')) {
-      if (node.param != null) {
-        removed =
-            _removeFromTree(node.param!, method, segments, index + 1, data);
-        if (node.param!.isEmpty) {
-          node.param = null;
-        }
-        return removed;
+    // 2. Try parameter match
+    if (node.param != null) {
+      final removed = _removeFromTree(
+        node.param!,
+        method,
+        segments,
+        index + 1,
+        data,
+      );
+      if (removed && node.param!.isEmpty) {
+        node.param = null;
       }
-      return false;
+      if (removed) return true;
     }
 
-    // 3. Try to remove from wildcard node
-    if (segment.startsWith('**')) {
-      if (node.wildcard != null) {
-        removed = _removeFromNode(node.wildcard!, method, data);
-        if (node.wildcard!.isEmpty) {
-          node.wildcard = null;
-        }
+    // 3. Try wildcard match
+    if (node.wildcard != null) {
+      final removed = _removeFromTree(
+        node.wildcard!,
+        method,
+        segments,
+        index + 1,
+        data,
+      );
+      if (removed && node.wildcard!.isEmpty) {
+        node.wildcard = null;
       }
-      return removed;
+      if (removed) return true;
     }
 
     return false;
   }
 
-  // 辅助方法
-  bool _hasOptionalLastParam(List<_RouteData<T>> routes) {
-    return routes.isNotEmpty && _isLastParamOptional(routes.first);
-  }
+  // Internal method: Convert path to segments
+  List<String> _pathToSegments(String path) {
+    // Normalize the path by removing any trailing slashes
+    final normalizedPath = path.endsWith('/') && path.length > 1
+        ? path.substring(0, path.length - 1)
+        : path;
 
-  bool _isLastParamOptional(_RouteData<T> routeData) {
-    return routeData.params?.lastOrNull?.optional == true;
-  }
+    // Remove query parameters and fragments
+    final cleanPath = normalizedPath.split('?')[0].split('#')[0];
 
-  // 路径转换工具
-  List<String> _pathToSegments(String path) =>
-      path.split('/').where((segment) => segment.isNotEmpty).toList();
+    // Split path into segments and remove empty segments
+    final segments = cleanPath.split('/').where((s) => s.isNotEmpty).toList();
 
-  String _segmentsToPath(List<String> segments) => segments.join('/');
+    // Process segments for special format parameters like ':filename.:format?'
+    for (int i = 0; i < segments.length; i++) {
+      final segment = segments[i];
+      // Check for pattern like ':name.:format?' or ':name.:format'
+      if (segment.startsWith(':') && segment.contains('.')) {
+        final parts = segment.split('.');
+        if (parts.length == 2) {
+          // Handle the pattern ':name.:format?' or ':name.:format'
+          final nameParam = parts[0];
+          final formatParam = parts[1];
+          final isFormatOptional = formatParam.endsWith('?');
 
-  // 创建参数模式
-  Pattern _createParamPattern(String segment) {
-    if (!segment.contains(':', 1)) {
-      return segment.substring(1);
+          // Update the segments[i] to just be the parameter name without the '?'
+          segments[i] = nameParam;
+
+          // Add special handling for this pattern
+          if (isFormatOptional) {
+            // Mark this segment as having an optional format parameter
+            segments[i] =
+                '$nameParam with optional format ${formatParam.substring(0, formatParam.length - 1)}';
+          } else {
+            // Mark this segment as having a required format parameter
+            segments[i] = '$nameParam with format $formatParam';
+          }
+        }
+      }
     }
 
-    final source = segment.replaceAllMapped(
-      RegExp(r':(\w+)'),
-      (match) => '(?<${match.group(1)}>\\w+)',
-    );
-
-    return RegExp(source);
+    return segments;
   }
 
-  // 提取匹配的参数
+  // Internal method: Convert segments to path
+  String _segmentsToPath(List<String> segments) {
+    return '/${segments.join('/')}';
+  }
+
+  // Internal method: Create parameter pattern
+  String _createParamPattern(String segment) {
+    // Check if this is a special segment with format information
+    if (segment.contains(' with ')) {
+      // Extract just the parameter name for pattern creation
+      return segment.split(' with ')[0].substring(1);
+    }
+    return segment.substring(1);
+  }
+
+  // Internal method: Extract parameters from segments
   Map<String, String>? _extractParams(
     List<_ParamInfo>? params,
     List<String> segments,
   ) {
-    if (params == null) return null;
+    if (params == null || params.isEmpty) return null;
 
     final result = <String, String>{};
+    var unnamedIndex = 0;
+
     for (final param in params) {
-      final index = param.index;
-      final value = index < 0
-          ? segments.skip(-1 * index).join('/')
-          : index < segments.length
-              ? segments[index]
-              : null;
+      if (param.index >= segments.length) {
+        if (!param.optional) return null;
+        continue;
+      }
 
-      if (value == null) continue;
+      final value = segments[param.index];
 
-      if (param.name is RegExp) {
-        final regex = param.name as RegExp;
-        for (final match in regex.allMatches(value)) {
-          for (final name in match.groupNames) {
-            final groupValue = match.namedGroup(name);
-            if (groupValue != null) {
-              result[name] = groupValue;
-            }
+      // Check if this parameter has format information
+      if (param.formatInfo != null) {
+        final formatName = param.formatInfo!['name']!;
+        final isOptional = param.formatInfo!['optional'] == 'true';
+
+        // If the value contains a dot, split it to extract format
+        if (value.contains('.')) {
+          final valueParts = value.split('.');
+          if (valueParts.length == 2) {
+            result[param.name] = valueParts[0];
+            result[formatName] = valueParts[1];
+            continue;
           }
         }
-      } else {
-        result[param.name.toString()] = value;
+
+        // If no dot in value, just use the whole value for the parameter
+        result[param.name] = value;
+
+        // If format is optional, we're done
+        // If not optional, this is an error case
+        if (!isOptional) {
+          return null;
+        }
+        continue;
+      }
+
+      // Handle special format parameters with 'with' syntax (from previous implementation)
+      if (param.name.contains(' with ')) {
+        final paramParts = param.name.split(' with ');
+        final paramName = paramParts[0];
+
+        // Check if this is a format parameter
+        if (paramParts[1].startsWith('format')) {
+          // Extract format information
+          final formatParam = paramParts[1].substring(7); // remove 'format '
+
+          // If the value contains a dot, split it to extract format
+          if (value.contains('.')) {
+            final valueParts = value.split('.');
+            if (valueParts.length >= 2) {
+              result[paramName] = valueParts[0];
+              result[formatParam] = valueParts[1];
+              continue;
+            }
+          }
+
+          // If no dot in value, just use the whole value for the parameter
+          result[paramName] = value;
+          // If format is optional, don't add it to results
+          // Otherwise format would be required but not found, so we'll return null later
+          if (param.optional) {
+            continue;
+          } else {
+            return null;
+          }
+        }
+      } else if (param.name == '_') {
+        // This is a wildcard parameter ('**')
+        if (param.index < segments.length) {
+          // For wildcards, we combine all remaining segments
+          final remainingSegments = segments.sublist(param.index);
+          result['_${unnamedIndex++}'] = remainingSegments.join('/');
+          continue;
+        }
+      } else if (param.name.isNotEmpty) {
+        // For regular named parameters
+        if (param.index < segments.length) {
+          if (segments[0].startsWith('**:')) {
+            // For named wildcards like '**:path', combine all segments
+            final remainingSegments = segments.sublist(param.index);
+            result[param.name] = remainingSegments.join('/');
+          } else {
+            // Regular named parameter
+            result[param.name] = segments[param.index];
+          }
+        }
       }
     }
 
-    return result.isNotEmpty ? result : null;
+    return result;
   }
 }
 
-/// 内部类：路由节点
+/// Internal class: Router node
 class _RouterNode<T> {
-  _RouterNode(this.key);
+  _RouterNode(this.segment);
 
-  final String key;
-  final Map<String, _RouterNode<T>> static = {};
+  final String segment;
+
+  final static = <String, _RouterNode<T>>{};
   _RouterNode<T>? param;
   _RouterNode<T>? wildcard;
   Map<String, List<_RouteData<T>>>? methods;
 
   bool get isEmpty =>
-      methods == null && static.isEmpty && param == null && wildcard == null;
+      static.isEmpty && param == null && wildcard == null && methods == null;
 }
 
-/// 内部类：路由数据
+/// Internal class: Route data
 class _RouteData<T> {
-  _RouteData({required this.data, this.params});
+  _RouteData({
+    required this.data,
+    this.params,
+  });
 
   final T data;
   final List<_ParamInfo>? params;
 }
 
-/// 内部类：参数信息
+/// Internal class: Parameter info
 class _ParamInfo {
   _ParamInfo({
     required this.index,
@@ -569,6 +730,9 @@ class _ParamInfo {
   });
 
   final int index;
-  final Pattern name;
+  final String name;
   final bool optional;
+
+  // Format parameter info for special cases like ':filename.:format?'
+  Map<String, String>? formatInfo;
 }
