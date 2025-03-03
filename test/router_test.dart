@@ -134,6 +134,8 @@ void main() {
       final allMatches = router.findAll(null, '/api');
       // Note: findAll returns multiple entries when method is null - one for each explicit method
       // plus the anyMethodToken entry
+      expect(allMatches.length,
+          equals(3)); // Should return exactly 3 matches without duplicates
       expect(allMatches.map((m) => m.data).contains('get-api'), isTrue);
       expect(allMatches.map((m) => m.data).contains('post-api'), isTrue);
       expect(allMatches.map((m) => m.data).contains('any-api'), isTrue);

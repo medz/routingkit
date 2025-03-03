@@ -215,39 +215,56 @@ class Router<T> {
     final normalizedPath = _segmentsToPath(segments);
     final result = <MatchedRoute<T>>[];
 
+    // Track already added route data to avoid duplicates
+    final addedRouteData = <T>{};
+
+    // Internal helper method to add routes without duplicates
+    void addUniqueMatchedRoutes(List<_RouteData<T>> routeDataList) {
+      for (final routeData in routeDataList) {
+        // Only add if not already in the result
+        if (!addedRouteData.contains(routeData.data)) {
+          addedRouteData.add(routeData.data);
+          result.add(MatchedRoute(
+            data: routeData.data,
+            params: includeParams
+                ? _extractParams(routeData.params, segments)
+                : null,
+          ));
+        }
+      }
+    }
+
     // 1. Look for static routes
     if (_staticRoutes.containsKey(normalizedPath)) {
       final node = _staticRoutes[normalizedPath]!;
 
       // Add exact method matches
-      if (normalizedMethod != null) {
-        _addMatchedRoutes(result, node.methods?[normalizedMethod] ?? [],
-            segments, includeParams);
+      if (normalizedMethod != null &&
+          node.methods?.containsKey(normalizedMethod) == true) {
+        addUniqueMatchedRoutes(node.methods![normalizedMethod] ?? []);
       }
 
-      // Add wildcard method matches (method is '')
-      _addMatchedRoutes(
-          result, node.methods?[anyMethodToken] ?? [], segments, includeParams);
+      // Add wildcard method matches
+      if (node.methods?.containsKey(anyMethodToken) == true) {
+        addUniqueMatchedRoutes(node.methods![anyMethodToken] ?? []);
+      }
 
       // If request method is null, add routes for all methods
       if (normalizedMethod == null && node.methods != null) {
         for (final entry in node.methods!.entries) {
           if (entry.key != anyMethodToken) {
             // Skip wildcard method since it's already added
-            _addMatchedRoutes(result, entry.value, segments, includeParams);
+            addUniqueMatchedRoutes(entry.value);
           }
         }
       }
     }
 
     // 2. Collect all matches from the route tree
-    final matches = _collectMatches(_root, normalizedMethod, segments, 0);
-    for (final match in matches) {
-      result.add(MatchedRoute(
-        data: match.data,
-        params: includeParams ? _extractParams(match.params, segments) : null,
-      ));
-    }
+    // Only process non-static routes to avoid duplicates
+    final treeMatches =
+        _collectMatchesNonStatic(_root, normalizedMethod, segments, 0);
+    addUniqueMatchedRoutes(treeMatches);
 
     return result;
   }
@@ -277,22 +294,6 @@ class Router<T> {
 
     // 2. Remove from the route tree
     return _removeFromTree(_root, normalizedMethod, segments, 0, data);
-  }
-
-  // Internal method: Add route data to result list
-  void _addMatchedRoutes(
-    List<MatchedRoute<T>> result,
-    List<_RouteData<T>> routeDataList,
-    List<String> segments,
-    bool includeParams,
-  ) {
-    for (final routeData in routeDataList) {
-      result.add(MatchedRoute(
-        data: routeData.data,
-        params:
-            includeParams ? _extractParams(routeData.params, segments) : null,
-      ));
-    }
   }
 
   // Internal method: Find matches in the route tree
@@ -389,17 +390,24 @@ class Router<T> {
     return matches.isNotEmpty ? matches : null;
   }
 
-  // Internal method: Collect all matches from the route tree
-  List<_RouteData<T>> _collectMatches(
+  // Internal method: Collect matches from the route tree, excluding static routes
+  // that were already processed by the static routes lookup
+  List<_RouteData<T>> _collectMatchesNonStatic(
     _RouterNode<T> node,
     String? method,
     List<String> segments,
     int index,
   ) {
     final matches = <_RouteData<T>>[];
+    final currentPath = _segmentsToPath(segments.sublist(0, index));
 
     // When reaching the end of the path
     if (index == segments.length) {
+      // Skip this node if it's a static route that was already processed
+      if (_staticRoutes.containsKey(_segmentsToPath(segments))) {
+        return matches;
+      }
+
       // 1. Check current node
       if (node.methods != null) {
         // Add exact method matches
@@ -407,7 +415,7 @@ class Router<T> {
           matches.addAll(node.methods![method] ?? []);
         }
 
-        // Add wildcard method matches (method is '')
+        // Add wildcard method matches
         if (node.methods!.containsKey(anyMethodToken)) {
           matches.addAll(node.methods![anyMethodToken] ?? []);
         }
@@ -432,7 +440,7 @@ class Router<T> {
 
     // 1. Try static match
     if (node.static.containsKey(segment)) {
-      staticMatches.addAll(_collectMatches(
+      staticMatches.addAll(_collectMatchesNonStatic(
         node.static[segment]!,
         method,
         segments,
@@ -442,7 +450,7 @@ class Router<T> {
 
     // 2. Try parameter match
     if (node.param != null) {
-      paramMatches.addAll(_collectMatches(
+      paramMatches.addAll(_collectMatchesNonStatic(
         node.param!,
         method,
         segments,
