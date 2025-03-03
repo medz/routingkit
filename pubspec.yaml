@@ -1,8 +1,7 @@
 name: routingkit
 description: >-
-  Routing Kit
-   - Lightweight and fast router.
-   - A composable pure function routing kit.
+  A lightweight, high-performance router for Dart with elegant API support for static, 
+  parameterized, and wildcard routes. Perfect for HTTP servers, API gateways, and application routing.
 version: 5.1.0
 repository: https://github.com/medz/routingkit
 
@@ -11,10 +10,10 @@ funding:
 
 topics:
   - router
-  - routing
-  - route
-  - fast-router
-  - routing-kit
+  - http
+  - path-matching
+  - trie
+  - performance
 
 environment:
   sdk: ^3.3.0
