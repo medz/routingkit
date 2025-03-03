@@ -9,6 +9,7 @@ RoutingKit provides a flexible and efficient routing system with the following f
 - Support for static, parameterized, and wildcard routes
 - Efficient memory usage through a trie-based route storage
 - Type-safe route handlers
+- Configurable case sensitivity for path matching
 
 ## Core Components
 
@@ -25,9 +26,17 @@ RoutingKit provides a flexible and efficient routing system with the following f
 ## Usage Example
 
 ```dart
+// Create a router with default settings (case-sensitive)
 final router = createRouter<String>();
+
+// Create a case-insensitive router
+final caseInsensitiveRouter = createRouter<String>(caseSensitive: false);
+
+// Add routes
 router.add('GET', '/path', 'static route');
 router.add('POST', '/path/:name', 'name route');
+
+// Find routes
 print(router.find('GET', '/path')); // => {data: static route}
 ```
 
@@ -37,6 +46,7 @@ print(router.find('GET', '/path')); // => {data: static route}
 - **Route Matching**: Find the first matching route or all matching routes
 - **Route Removal**: Remove routes by method, path, and data
 - **HTTP Method Matching**: Specify different handling logic for different HTTP methods
+- **Case Sensitivity**: Configure whether path matching is case-sensitive or not
 
 ## API Reference
 
@@ -44,11 +54,16 @@ print(router.find('GET', '/path')); // => {data: static route}
 
 The `Router<T>` class is the core component of RoutingKit. It provides methods for managing and matching routes.
 
+#### Properties:
+
+- `String anyMethodToken`: Token used to represent any HTTP method
+- `bool caseSensitive`: Whether path matching is case-sensitive
+
 #### Key Methods:
 
 - `void add(String? method, String path, T data)`: Adds a new route to the router
-- `MatchedRoute<T>? find(String? method, String path)`: Finds the first route matching the given path and method
-- `List<MatchedRoute<T>> findAll(String? method, String path)`: Finds all routes matching the given path and method
+- `MatchedRoute<T>? find(String? method, String path, {bool includeParams = true})`: Finds the first route matching the given path and method
+- `List<MatchedRoute<T>> findAll(String? method, String path, {bool includeParams = true})`: Finds all routes matching the given path and method
 - `bool remove(String? method, String path, [T? data])`: Removes a route from the router
 
 ### MatchedRoute<T> Class
@@ -58,4 +73,13 @@ The `MatchedRoute<T>` class represents a matched route result.
 #### Properties:
 
 - `T data`: Data associated with the matched route
-- `Map<String, String>? params`: Parameters extracted from the route, null if no parameters 
+- `Map<String, String>? params`: Parameters extracted from the route, null if no parameters
+
+### createRouter<T> Function
+
+Creates a new router instance with the specified configuration.
+
+#### Parameters:
+
+- `String anyMethodToken`: Token used to represent any HTTP method, defaults to 'routerkit-method://any'
+- `bool caseSensitive`: Whether path matching is case-sensitive, defaults to true 

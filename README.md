@@ -19,6 +19,7 @@ RoutingKit - A lightweight, high-performance router for Dart with an elegant obj
 - 💪 **Type Safety**: Generic typing for your route handlers
 - 🔍 **Comprehensive Matching**: Find single or all matching routes
 - 🧰 **Object-Oriented API**: Clean, chainable methods for route management
+- 🔠 **Case Sensitivity Options**: Configure whether path matching is case sensitive or not
 
 ## Installation
 
@@ -46,6 +47,15 @@ final router = createRouter<String>();
 
 // For handling different data types
 final dynamicRouter = createRouter<dynamic>();
+
+// Create a case-insensitive router
+final caseInsensitiveRouter = createRouter<String>(caseSensitive: false);
+
+// Configure both case sensitivity and custom anyMethodToken
+final customRouter = createRouter<String>(
+  caseSensitive: false,
+  anyMethodToken: 'ANY_METHOD',
+);
 ```
 
 ### Adding Routes
@@ -123,6 +133,42 @@ router.add('POST', '/users', 'post-users'); // Will be normalized to 'POST'
 router.find('get', '/users');   // Matches
 router.find('GET', '/users');   // Matches
 router.find('Get', '/users');   // Matches
+```
+
+### Advanced Configuration
+
+#### Case Sensitivity
+
+By default, RoutingKit performs case-sensitive path matching. You can make path matching case-insensitive:
+
+```dart
+// Create a case-insensitive router
+final router = createRouter<String>(caseSensitive: false);
+
+// Add a route with mixed case
+router.add('GET', '/Users/:ID', 'user handler');
+
+// All these will match the same route
+final match1 = router.find('GET', '/users/123');    // Matches
+final match2 = router.find('GET', '/Users/456');    // Matches
+final match3 = router.find('GET', '/USERS/789');    // Matches
+
+// Parameter names preserve their original case
+print(match1.params);  // {ID: 123}
+```
+
+#### Custom Method Tokens
+
+You can customize the token used to represent any HTTP method:
+
+```dart
+final router = createRouter<String>(anyMethodToken: 'ANY_METHOD');
+
+// Add routes with different methods
+router.add('GET', '/api', 'get handler');
+router.add(null, '/api', 'any handler');  // Uses custom token
+
+router.find('POST', '/api')?.data;  // Returns 'any handler'
 ```
 
 ## Example Applications
