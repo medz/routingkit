@@ -2,19 +2,19 @@
 
 ### Breaking Changes
 
-- 完全重构了API，将函数式风格改为面向对象风格
-- 主要操作现在是Router类的方法，而不是独立函数
-- 移除了导出的操作函数，如addRoute，findRoute等
+- Complete API restructuring from functional to object-oriented style
+- Core operations are now methods of the Router class instead of standalone functions
+- Removed exported operation functions such as addRoute, findRoute, etc.
 
-### 新增功能
+### New Features
 
-- 引入了Router类作为主要入口点
-- 提供更简洁的链式API
-- 内部实现优化，代码结构更清晰
+- Introduced Router class as the main entry point
+- Provided a more concise chainable API
+- Optimized internal implementation with clearer code structure
 
-### 迁移指南
+### Migration Guide
 
-从v4.x迁移到v5.0.0:
+Migrating from v4.x to v5.0.0:
 
 ```diff
 import 'package:routingkit/routingkit.dart';

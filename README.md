@@ -9,8 +9,16 @@
 </p>
 
 <p align="center">
-Routing Kit - Lightweight and fast router for Dart.
+RoutingKit - A lightweight, high-performance router for Dart with an elegant object-oriented API.
 </p>
+
+## Features
+
+- 🚀 **High Performance**: Optimized route matching using a trie-based structure
+- 🧩 **Flexible Routes**: Support for static, parameterized, and wildcard routes
+- 💪 **Type Safety**: Generic typing for your route handlers
+- 🔍 **Comprehensive Matching**: Find single or all matching routes
+- 🧰 **Object-Oriented API**: Clean, chainable methods for route management
 
 ## Installation
 
@@ -28,39 +36,142 @@ flutter pub add routingkit
 
 ## Usage
 
-### Create a router instance and insert routes
+### Creating a Router
 
 ```dart
-import "routingkit";
+import 'package:routingkit/routingkit.dart';
 
+// Create a typed router (recommended)
 final router = createRouter<String>();
 
-router.add('get', '/path', 'Static path');
-router.add('get', '/path/:name', 'Param route');
-router.add('get', '/path/*', 'Unnamed param route');
-router.add('get', '/path/**', 'Wildcard Route');
-router.add('get', '/path/**:rest', 'Named wildcard route');
-router.add('get', '/files/:dir/:filename.:format,v:version', 'Mixed Route');
+// For handling different data types
+final dynamicRouter = createRouter<dynamic>();
 ```
 
-### Match route to access matched data
+### Adding Routes
+
+RoutingKit supports various route patterns:
 
 ```dart
-// {data: Static path}
-router.find('get', '/path')
+// Static routes
+router.add('GET', '/users', 'Users list handler');
 
-// {data: Param route, params: {name: seven}}
-router.find('get', '/path/seven')
+// Parameter routes (with named parameters)
+router.add('GET', '/users/:id', 'User details handler');
 
-// {data: Wildcard Route, params: {_: foo/bar/baz}}
-router.find('get', '/path/foo/bar/baz')
+// Multiple parameters
+router.add('GET', '/users/:id/posts/:postId', 'User post handler');
 
-// {data: Mixed Route, params: {dir: dart, filename: pubspec, format: yaml, version: 1}}
-router.find('get', '/files/dart/pubspec.yaml,v1')
+// Optional format parameter
+router.add('GET', '/files/:filename.:format?', 'File handler');
 
-// `null`, No match.
-router.find('get', '/')
+// Wildcard routes
+router.add('GET', '/assets/**', 'Static assets handler');
+
+// Named wildcard segments
+router.add('GET', '/docs/**:path', 'Documentation handler');
+
+// Method-specific routes
+router.add('POST', '/users', 'Create user handler');
+router.add('PUT', '/users/:id', 'Update user handler');
+router.add('DELETE', '/users/:id', 'Delete user handler');
 ```
+
+### Matching Routes
+
+Find the first matching route:
+
+```dart
+final match = router.find('GET', '/users/123');
+
+if (match != null) {
+  print('Handler: ${match.data}');
+  print('Parameters: ${match.params}'); // {id: 123}
+}
+```
+
+Find all matching routes (useful for middleware):
+
+```dart
+final matches = router.findAll('GET', '/users/123/settings');
+
+for (final match in matches) {
+  print('Handler: ${match.data}');
+  print('Parameters: ${match.params}');
+}
+```
+
+### Removing Routes
+
+```dart
+// Remove a specific route
+router.remove('GET', '/users/:id');
+
+// Remove all routes for a specific method
+router.remove('POST', null);
+```
+
+## Example Applications
+
+### HTTP Server Routing
+
+```dart
+import 'dart:io';
+import 'package:routingkit/routingkit.dart';
+
+void main() async {
+  final router = createRouter<Function>();
+  
+  // Define routes with handler functions
+  router.add('GET', '/', (req, res) => res.write('Home page'));
+  router.add('GET', '/users', (req, res) => res.write('Users list'));
+  router.add('GET', '/users/:id', (req, res) => res.write('User ${req.params['id']}'));
+  
+  final server = await HttpServer.bind('localhost', 8080);
+  print('Server running on http://localhost:8080');
+  
+  await for (final request in server) {
+    final response = request.response;
+    final path = request.uri.path;
+    final method = request.method;
+    
+    final match = router.find(method, path);
+    
+    if (match != null) {
+      final handler = match.data;
+      // Add params to request for handler access
+      (request as dynamic).params = match.params;
+      handler(request, response);
+    } else {
+      response.statusCode = HttpStatus.notFound;
+      response.write('404 Not Found');
+    }
+    
+    await response.close();
+  }
+}
+```
+
+## For AI Assistance
+
+RoutingKit includes an `llms.txt` file at the root of the repository. This file is specifically designed to help Large Language Models (LLMs) understand the project structure and functionality.
+
+If you're using AI tools like GitHub Copilot, Claude, or ChatGPT to work with this codebase, you can point them to the `llms.txt` file for better context and more accurate assistance.
+
+```dart
+// Example: Asking an AI about the project
+"Please read the llms.txt file in this repository to understand the RoutingKit structure"
+```
+
+The file provides AI-friendly documentation including:
+- Project overview and core concepts
+- Code structure explanation
+- API reference and examples
+- Links to relevant implementation files
+
+## Migration from v4.x
+
+See the [Migration Guide](https://github.com/medz/routingkit/blob/main/CHANGELOG.md#migration-guide) in the changelog.
 
 ## License
 
