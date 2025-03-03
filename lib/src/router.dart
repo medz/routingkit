@@ -87,9 +87,27 @@ class Router<T> {
     // 1. 查找静态路由
     if (_staticRoutes.containsKey(normalizedPath)) {
       final node = _staticRoutes[normalizedPath]!;
-      final values = node.methods?[method] ?? node.methods?[''];
-      if (values != null && values.isNotEmpty) {
-        return MatchedRoute(data: values.first.data);
+
+      // 首先检查精确的方法匹配
+      final methodValues = node.methods?[method];
+      if (methodValues != null && methodValues.isNotEmpty) {
+        return MatchedRoute(
+          data: methodValues.first.data,
+          params: includeParams
+              ? _extractParams(methodValues.first.params, segments)
+              : null,
+        );
+      }
+
+      // 然后检查通配符方法匹配 (方法为null)
+      final wildcardMethodValues = node.methods?[''];
+      if (wildcardMethodValues != null && wildcardMethodValues.isNotEmpty) {
+        return MatchedRoute(
+          data: wildcardMethodValues.first.data,
+          params: includeParams
+              ? _extractParams(wildcardMethodValues.first.params, segments)
+              : null,
+        );
       }
     }
 
@@ -119,10 +137,26 @@ class Router<T> {
     // 1. 查找静态路由
     if (_staticRoutes.containsKey(normalizedPath)) {
       final node = _staticRoutes[normalizedPath]!;
-      _addMatchedRoutes(
-          result, node.methods?[method] ?? [], segments, includeParams);
+
+      // 添加精确方法匹配
+      if (method != null) {
+        _addMatchedRoutes(
+            result, node.methods?[method] ?? [], segments, includeParams);
+      }
+
+      // 添加通配符方法匹配（方法为null）
       _addMatchedRoutes(
           result, node.methods?[''] ?? [], segments, includeParams);
+
+      // 如果请求方法为null，添加所有方法的路由
+      if (method == null && node.methods != null) {
+        for (final entry in node.methods!.entries) {
+          if (entry.key.isNotEmpty) {
+            // 跳过通配符方法，因为已经添加过
+            _addMatchedRoutes(result, entry.value, segments, includeParams);
+          }
+        }
+      }
     }
 
     // 2. 收集路由树中的所有匹配
@@ -189,13 +223,34 @@ class Router<T> {
     if (index == segments.length) {
       // 1. 检查当前节点
       if (node.methods != null) {
-        final values = node.methods?[method] ?? node.methods?[''];
-        if (values != null) return values;
+        // 首先检查精确方法匹配
+        if (method != null && node.methods!.containsKey(method)) {
+          return node.methods![method];
+        }
+
+        // 然后检查通配符方法匹配 (方法为 '')
+        if (node.methods!.containsKey('')) {
+          return node.methods![''];
+        }
+
+        // 如果方法为null，应该返回null，因为此时调用者需要手动处理所有方法
+        if (method == null) {
+          return null;
+        }
+
+        return null;
       }
 
       // 2. 检查参数节点（可选参数）
       if (node.param != null && node.param!.methods != null) {
-        final values = node.param!.methods?[method] ?? node.param!.methods?[''];
+        // 与上面相同的逻辑
+        List<_RouteData<T>>? values;
+        if (method != null && node.param!.methods!.containsKey(method)) {
+          values = node.param!.methods![method];
+        } else if (node.param!.methods!.containsKey('')) {
+          values = node.param!.methods![''];
+        }
+
         if (values != null && _hasOptionalLastParam(values)) {
           return values;
         }
@@ -203,8 +258,14 @@ class Router<T> {
 
       // 3. 检查通配符节点（可选参数）
       if (node.wildcard != null && node.wildcard!.methods != null) {
-        final values =
-            node.wildcard!.methods?[method] ?? node.wildcard!.methods?[''];
+        // 与上面相同的逻辑
+        List<_RouteData<T>>? values;
+        if (method != null && node.wildcard!.methods!.containsKey(method)) {
+          values = node.wildcard!.methods![method];
+        } else if (node.wildcard!.methods!.containsKey('')) {
+          values = node.wildcard!.methods![''];
+        }
+
         if (values != null && _hasOptionalLastParam(values)) {
           return values;
         }
@@ -230,7 +291,15 @@ class Router<T> {
 
     // 3. 检查通配符节点
     if (node.wildcard != null && node.wildcard!.methods != null) {
-      return node.wildcard!.methods?[method] ?? node.wildcard!.methods?[''];
+      // 与上面相同的逻辑
+      List<_RouteData<T>>? values;
+      if (method != null && node.wildcard!.methods!.containsKey(method)) {
+        values = node.wildcard!.methods![method];
+      } else if (node.wildcard!.methods!.containsKey('')) {
+        values = node.wildcard!.methods![''];
+      }
+
+      return values;
     }
 
     return null;
@@ -249,16 +318,33 @@ class Router<T> {
     if (index == segments.length) {
       // 1. 收集当前节点的匹配
       if (node.methods != null) {
-        result.addAll(node.methods?[method] ?? []);
-        result.addAll(node.methods?[''] ?? []);
+        // 如果method不为null，只收集匹配的方法和空方法
+        if (method != null) {
+          result.addAll(node.methods?[method] ?? []);
+          result.addAll(node.methods?[''] ?? []);
+        } else {
+          // 如果method为null，收集所有方法
+          for (final values in node.methods!.values) {
+            result.addAll(values);
+          }
+        }
       }
 
       // 2. 收集参数节点的匹配（可选参数）
       if (node.param != null && node.param!.methods != null) {
-        for (final routeData in [
-          ...(node.param!.methods?[method] ?? []),
-          ...(node.param!.methods?[''] ?? [])
-        ]) {
+        List<_RouteData<T>> routesToCheck = [];
+
+        // 按照上面相同的逻辑收集路由
+        if (method != null) {
+          routesToCheck.addAll(node.param!.methods?[method] ?? []);
+          routesToCheck.addAll(node.param!.methods?[''] ?? []);
+        } else {
+          for (final values in node.param!.methods!.values) {
+            routesToCheck.addAll(values);
+          }
+        }
+
+        for (final routeData in routesToCheck) {
           if (_isLastParamOptional(routeData)) {
             result.add(routeData);
           }
@@ -267,10 +353,19 @@ class Router<T> {
 
       // 3. 收集通配符节点的匹配（可选参数）
       if (node.wildcard != null && node.wildcard!.methods != null) {
-        for (final routeData in [
-          ...(node.wildcard!.methods?[method] ?? []),
-          ...(node.wildcard!.methods?[''] ?? [])
-        ]) {
+        List<_RouteData<T>> routesToCheck = [];
+
+        // 按照上面相同的逻辑收集路由
+        if (method != null) {
+          routesToCheck.addAll(node.wildcard!.methods?[method] ?? []);
+          routesToCheck.addAll(node.wildcard!.methods?[''] ?? []);
+        } else {
+          for (final values in node.wildcard!.methods!.values) {
+            routesToCheck.addAll(values);
+          }
+        }
+
+        for (final routeData in routesToCheck) {
           if (_isLastParamOptional(routeData)) {
             result.add(routeData);
           }
@@ -295,8 +390,19 @@ class Router<T> {
 
     // 3. 收集通配符节点的匹配
     if (node.wildcard != null && node.wildcard!.methods != null) {
-      result.addAll(node.wildcard!.methods?[method] ?? []);
-      result.addAll(node.wildcard!.methods?[''] ?? []);
+      List<_RouteData<T>> matches = [];
+
+      // 按照上面相同的逻辑收集路由
+      if (method != null) {
+        matches.addAll(node.wildcard!.methods?[method] ?? []);
+        matches.addAll(node.wildcard!.methods?[''] ?? []);
+      } else {
+        for (final values in node.wildcard!.methods!.values) {
+          matches.addAll(values);
+        }
+      }
+
+      result.addAll(matches);
     }
 
     return result;
