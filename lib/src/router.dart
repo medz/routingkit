@@ -5,16 +5,17 @@ import 'types.dart';
 /// Generic type [T] represents the data type associated with routes
 /// [anyMethodToken] is the token used to represent any HTTP method, defaults to 'routerkit-method://any'
 Router<T> createRouter<T>({String anyMethodToken = 'routerkit-method://any'}) =>
-    Router<T>(anyMethodToken: anyMethodToken);
+    _RouterImpl<T>(anyMethodToken: anyMethodToken);
 
-/// Router class, provides route management and matching functionality
-class Router<T> {
+/// Internal implementation of Router interface
+class _RouterImpl<T> implements Router<T> {
   /// Creates a new router instance
   ///
   /// [anyMethodToken] is the token used to represent any HTTP method
-  Router({this.anyMethodToken = 'routerkit-method://any'});
+  _RouterImpl({this.anyMethodToken = 'routerkit-method://any'});
 
   /// Token used to represent any HTTP method
+  @override
   final String anyMethodToken;
 
   /// Root node
@@ -28,6 +29,7 @@ class Router<T> {
   /// [method] HTTP method like 'GET', 'POST', etc. If null, matches any method
   /// [path] Route path pattern
   /// [data] Data associated with this route
+  @override
   void add(String? method, String path, T data) {
     // Normalize HTTP method to uppercase
     final normalizedMethod = method?.toUpperCase();
@@ -155,6 +157,7 @@ class Router<T> {
   /// [includeParams] Whether to include matched parameters in the result, defaults to true
   ///
   /// Returns [MatchedRoute<T>] if a match is found, null otherwise
+  @override
   MatchedRoute<T>? find(String? method, String path,
       {bool includeParams = true}) {
     // Normalize HTTP method to uppercase
@@ -207,6 +210,7 @@ class Router<T> {
   /// [includeParams] Whether to include matched parameters in the result, defaults to true
   ///
   /// Returns a list of all matching routes
+  @override
   List<MatchedRoute<T>> findAll(String? method, String path,
       {bool includeParams = true}) {
     // Normalize HTTP method to uppercase
@@ -276,6 +280,7 @@ class Router<T> {
   /// [data] Optional, if provided, only removes the route if the route data matches
   ///
   /// Returns whether a route was removed
+  @override
   bool remove(String? method, String path, [T? data]) {
     // Normalize HTTP method to uppercase
     final normalizedMethod = method?.toUpperCase();

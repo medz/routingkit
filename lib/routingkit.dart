@@ -9,7 +9,7 @@
 /// - Type-safe route handlers
 ///
 /// Key components:
-/// - [Router]: The main router class for managing routes
+/// - [Router]: The router interface for managing routes
 /// - [createRouter]: Creates a new router instance
 ///
 /// Example usage:
@@ -23,5 +23,6 @@
 /// ![Pub version](https://img.shields.io/pub/v/routingkit?logo=dart)
 library routingkit;
 
-export 'src/router.dart';
-export 'src/types.dart' show MatchedRoute;
+// Export the public API only
+export 'src/router.dart' show createRouter;
+export 'src/types.dart' show MatchedRoute, Router;
