@@ -1,6 +1,4 @@
 import 'types.dart';
-import '_internal/node_impl.dart';
-import '_internal/utils.dart';
 
 /// 创建一个新的路由器实例
 ///
@@ -9,10 +7,13 @@ Router<T> createRouter<T>() => Router<T>();
 
 /// 路由器类，提供路由管理和匹配功能
 class Router<T> {
-  final RouterContext<T> _context;
+  Router();
 
-  /// 创建一个新的路由器实例
-  Router() : _context = _createContext<T>();
+  /// 根节点
+  final _root = _RouterNode<T>('');
+
+  /// 静态路由映射，用于快速查找
+  final _staticRoutes = <String, _RouterNode<T>>{};
 
   /// 添加新路由到路由器
   ///
@@ -20,54 +21,54 @@ class Router<T> {
   /// [path] 路由路径模式
   /// [data] 与此路由关联的数据
   void add(String? method, String path, T data) {
-    final segments = toPathSegments(path);
-    final ParamsMetadata params = [];
+    final segments = _pathToSegments(path);
+    final params = <_ParamInfo>[];
 
-    Node<T> node = _context.root;
-    int unmamedParamIndex = 0;
+    var node = _root;
+    var unnamedParamIndex = 0;
 
     for (final (index, segment) in segments.indexed) {
-      // Wildcard
+      // 处理通配符路径段 (如 ** 或 **:name)
       if (segment.startsWith('**')) {
-        node = node.wildcard ??= NodeImpl<T>('**');
-        params.add((
+        node = node.wildcard ??= _RouterNode('**');
+        params.add(_ParamInfo(
           index: index,
           name: segment.split(':').elementAtOrNull(1) ?? '_',
           optional: segment.length == 2,
         ));
-
         break;
       }
 
-      // Param
+      // 处理参数路径段 (如 * 或 :name)
       if (segment == '*' || segment.startsWith(':')) {
         final optional = segment == '*';
-
-        node = node.param ??= NodeImpl<T>('*');
-        params.add((
+        node = node.param ??= _RouterNode('*');
+        params.add(_ParamInfo(
           index: index,
           name: optional
-              ? '_${unmamedParamIndex++}'
-              : _createParamsMatcher(segment),
-          optional: optional
+              ? '_${unnamedParamIndex++}'
+              : _createParamPattern(segment),
+          optional: optional,
         ));
-
         continue;
       }
 
-      // Static
-      node = (node.static ??= {}).putIfAbsent(segment, () => NodeImpl(segment));
+      // 处理静态路径段
+      node = node.static.putIfAbsent(segment, () => _RouterNode(segment));
     }
 
-    // Assign params and data to the node.
-    (node.methods ??= {}).putIfAbsent(method ?? '', () => []).add(MethodData(
-          data: data,
-          params: params.isNotEmpty ? params : null,
-        ));
+    // 添加路由数据到节点
+    final routeData = _RouteData(
+      data: data,
+      params: params.isNotEmpty ? params : null,
+    );
 
-    // All segments is static.
+    (node.methods ??= {})[method ?? ''] =
+        ((node.methods?[method ?? ''] ?? [])..add(routeData));
+
+    // 如果是纯静态路径，添加到静态路由映射
     if (params.isEmpty) {
-      _context.static[toSegmentsPath(segments)] = node;
+      _staticRoutes[_segmentsToPath(segments)] = node;
     }
   }
 
@@ -75,32 +76,30 @@ class Router<T> {
   ///
   /// [method] 要匹配的HTTP方法。如果为null，则匹配任何方法
   /// [path] 要匹配的路径
-  /// [params] 是否在结果中包含匹配的参数，默认为true
+  /// [includeParams] 是否在结果中包含匹配的参数，默认为true
   ///
   /// 如果找到匹配项，则返回[MatchedRoute<T>]，否则返回null
-  MatchedRoute<T>? find(String? method, String path, {bool params = true}) {
-    final segments = toPathSegments(path);
-    final normalizedPath = toSegmentsPath(segments);
+  MatchedRoute<T>? find(String? method, String path,
+      {bool includeParams = true}) {
+    final segments = _pathToSegments(path);
+    final normalizedPath = _segmentsToPath(segments);
 
-    // 0. global static matched.
-    if (_context.static[normalizedPath]
-        case Node<T>(
-          methods: final Map<String, List<MethodData<T>>> methodMap
-        )) {
-      final values = methodMap[method] ?? methodMap[''];
-      if (values?.firstOrNull?.data case final data when data is T) {
-        return MatchedRoute(data: data);
+    // 1. 查找静态路由
+    if (_staticRoutes.containsKey(normalizedPath)) {
+      final node = _staticRoutes[normalizedPath]!;
+      final values = node.methods?[method] ?? node.methods?[''];
+      if (values != null && values.isNotEmpty) {
+        return MatchedRoute(data: values.first.data);
       }
     }
 
-    // 1. lookup tree.
-    final match =
-        _lookupTree(_context, _context.root, method, segments, 0)?.firstOrNull;
+    // 2. 在路由树中查找
+    final match = _findInTree(_root, method, segments, 0)?.firstOrNull;
     if (match == null) return null;
 
     return MatchedRoute(
       data: match.data,
-      params: params ? toMatchedRouteParams(match.params, segments) : null,
+      params: includeParams ? _extractParams(match.params, segments) : null,
     );
   }
 
@@ -108,44 +107,30 @@ class Router<T> {
   ///
   /// [method] 要匹配的HTTP方法。如果为null，则匹配任何方法
   /// [path] 要匹配的路径
-  /// [params] 是否在结果中包含匹配的参数，默认为true
+  /// [includeParams] 是否在结果中包含匹配的参数，默认为true
   ///
   /// 返回所有匹配的路由列表
   List<MatchedRoute<T>> findAll(String? method, String path,
-      {bool params = true}) {
-    final segments = toPathSegments(path);
-    final normalizedPath = toSegmentsPath(segments);
+      {bool includeParams = true}) {
+    final segments = _pathToSegments(path);
+    final normalizedPath = _segmentsToPath(segments);
     final result = <MatchedRoute<T>>[];
 
-    // 0. global static matched.
-    if (_context.static[normalizedPath]
-        case Node<T>(
-          methods: final Map<String, List<MethodData<T>>> methodMap
-        )) {
-      for (final methodData in methodMap[method] ?? []) {
-        result.add(MatchedRoute(
-          data: methodData.data,
-          params:
-              params ? toMatchedRouteParams(methodData.params, segments) : null,
-        ));
-      }
-
-      for (final methodData in methodMap[''] ?? []) {
-        result.add(MatchedRoute(
-          data: methodData.data,
-          params:
-              params ? toMatchedRouteParams(methodData.params, segments) : null,
-        ));
-      }
+    // 1. 查找静态路由
+    if (_staticRoutes.containsKey(normalizedPath)) {
+      final node = _staticRoutes[normalizedPath]!;
+      _addMatchedRoutes(
+          result, node.methods?[method] ?? [], segments, includeParams);
+      _addMatchedRoutes(
+          result, node.methods?[''] ?? [], segments, includeParams);
     }
 
-    // 1. lookup tree.
-    for (final methodData
-        in _collectMatches(_context, _context.root, method, segments, 0)) {
+    // 2. 收集路由树中的所有匹配
+    final matches = _collectMatches(_root, method, segments, 0);
+    for (final match in matches) {
       result.add(MatchedRoute(
-        data: methodData.data,
-        params:
-            params ? toMatchedRouteParams(methodData.params, segments) : null,
+        data: match.data,
+        params: includeParams ? _extractParams(match.params, segments) : null,
       ));
     }
 
@@ -160,56 +145,67 @@ class Router<T> {
   ///
   /// 返回是否有路由被删除
   bool remove(String? method, String path, [T? data]) {
-    final segments = toPathSegments(path);
-    final normalizedPath = toSegmentsPath(segments);
+    final segments = _pathToSegments(path);
+    final normalizedPath = _segmentsToPath(segments);
 
-    // 0. find node.
-    final staticNode = _context.static[normalizedPath];
-    if (staticNode != null) {
-      final removed = _removeMethodData(staticNode, method, data);
-      if (removed && staticNode.methods?.isEmpty == true) {
-        _context.static.remove(normalizedPath);
+    // 1. 检查静态路由
+    if (_staticRoutes.containsKey(normalizedPath)) {
+      final node = _staticRoutes[normalizedPath]!;
+      final removed = _removeFromNode(node, method, data);
+      if (removed && node.isEmpty) {
+        _staticRoutes.remove(normalizedPath);
       }
       return removed;
     }
 
-    // 1. remove from tree.
-    return _removeFromTree(_context.root, method, segments, 0, data);
+    // 2. 在路由树中删除
+    return _removeFromTree(_root, method, segments, 0, data);
   }
 
-  Iterable<MethodData<T>>? _lookupTree(
-    RouterContext<T> ctx,
-    Node<T> node,
+  // 内部方法：将路由数据添加到结果列表
+  void _addMatchedRoutes(
+    List<MatchedRoute<T>> result,
+    List<_RouteData<T>> routeDataList,
+    List<String> segments,
+    bool includeParams,
+  ) {
+    for (final routeData in routeDataList) {
+      result.add(MatchedRoute(
+        data: routeData.data,
+        params:
+            includeParams ? _extractParams(routeData.params, segments) : null,
+      ));
+    }
+  }
+
+  // 内部方法：在路由树中查找匹配
+  List<_RouteData<T>>? _findInTree(
+    _RouterNode<T> node,
     String? method,
-    Iterable<String> segments,
+    List<String> segments,
     int index,
   ) {
-    // 0. Ends
+    // 当到达路径末尾时
     if (index == segments.length) {
+      // 1. 检查当前节点
       if (node.methods != null) {
         final values = node.methods?[method] ?? node.methods?[''];
         if (values != null) return values;
       }
 
-      // Fallback to dynamic for last child (/test and /test/ matches /test/*)
-      if (node.param case Node<T>(methods: final methodMap)
-          when methodMap != null) {
-        final values = methodMap[method] ?? methodMap[''];
-
-        // The reason for only checking first here is that findRoute only returns the first match.
-        if (values != null &&
-            values.firstOrNull?.params?.lastOrNull?.optional == true) {
+      // 2. 检查参数节点（可选参数）
+      if (node.param != null && node.param!.methods != null) {
+        final values = node.param!.methods?[method] ?? node.param!.methods?[''];
+        if (values != null && _hasOptionalLastParam(values)) {
           return values;
         }
       }
 
-      if (node.wildcard case Node<T>(methods: final methodMap)
-          when methodMap != null) {
-        final values = methodMap[method] ?? methodMap[''];
-
-        // The reason for only checking first here is that findRoute only returns the first match.
-        if (values != null &&
-            values.firstOrNull?.params?.lastOrNull?.optional == true) {
+      // 3. 检查通配符节点（可选参数）
+      if (node.wildcard != null && node.wildcard!.methods != null) {
+        final values =
+            node.wildcard!.methods?[method] ?? node.wildcard!.methods?[''];
+        if (values != null && _hasOptionalLastParam(values)) {
           return values;
         }
       }
@@ -217,61 +213,66 @@ class Router<T> {
       return null;
     }
 
-    final segment = segments.elementAtOrNull(index);
+    final segment = segments[index];
 
-    // 1. static
-    if (node.static?[segment] case final Node<T> node) {
-      final values = _lookupTree(ctx, node, method, segments, index + 1);
-      if (values != null) return values;
+    // 1. 检查静态节点
+    if (node.static.containsKey(segment)) {
+      final result =
+          _findInTree(node.static[segment]!, method, segments, index + 1);
+      if (result != null) return result;
     }
 
-    // 2. param
-    if (node.param case final Node<T> node) {
-      final values = _lookupTree(ctx, node, method, segments, index + 1);
-      if (values != null) return values;
+    // 2. 检查参数节点
+    if (node.param != null) {
+      final result = _findInTree(node.param!, method, segments, index + 1);
+      if (result != null) return result;
     }
 
-    // 3. wildcard
-    if (node.wildcard case Node<T>(methods: final methodMap)
-        when methodMap != null) {
-      return methodMap[method] ?? methodMap[''];
+    // 3. 检查通配符节点
+    if (node.wildcard != null && node.wildcard!.methods != null) {
+      return node.wildcard!.methods?[method] ?? node.wildcard!.methods?[''];
     }
 
-    // No match
     return null;
   }
 
-  List<MethodData<T>> _collectMatches(
-    RouterContext<T> ctx,
-    Node<T> node,
+  // 内部方法：收集所有匹配的路由
+  List<_RouteData<T>> _collectMatches(
+    _RouterNode<T> node,
     String? method,
-    Iterable<String> segments,
+    List<String> segments,
     int index,
   ) {
-    final result = <MethodData<T>>[];
+    final result = <_RouteData<T>>[];
 
-    // 0. Ends
+    // 当到达路径末尾时
     if (index == segments.length) {
+      // 1. 收集当前节点的匹配
       if (node.methods != null) {
         result.addAll(node.methods?[method] ?? []);
         result.addAll(node.methods?[''] ?? []);
       }
 
-      // Fallback to dynamic for last child.
-      if (node.param case Node<T>(methods: final methodMap)
-          when methodMap != null) {
-        for (final value in (methodMap[method] ?? []) + (methodMap[''] ?? [])) {
-          if (value.params?.lastOrNull?.optional == true) {
-            result.add(value);
+      // 2. 收集参数节点的匹配（可选参数）
+      if (node.param != null && node.param!.methods != null) {
+        for (final routeData in [
+          ...(node.param!.methods?[method] ?? []),
+          ...(node.param!.methods?[''] ?? [])
+        ]) {
+          if (_isLastParamOptional(routeData)) {
+            result.add(routeData);
           }
         }
       }
 
-      if (node.wildcard case Node<T>(methods: final methodMap)
-          when methodMap != null) {
-        for (final value in (methodMap[method] ?? []) + (methodMap[''] ?? [])) {
-          if (value.params?.lastOrNull?.optional == true) {
-            result.add(value);
+      // 3. 收集通配符节点的匹配（可选参数）
+      if (node.wildcard != null && node.wildcard!.methods != null) {
+        for (final routeData in [
+          ...(node.wildcard!.methods?[method] ?? []),
+          ...(node.wildcard!.methods?[''] ?? [])
+        ]) {
+          if (_isLastParamOptional(routeData)) {
+            result.add(routeData);
           }
         }
       }
@@ -279,178 +280,203 @@ class Router<T> {
       return result;
     }
 
-    final segment = segments.elementAtOrNull(index);
+    final segment = segments[index];
 
-    // 1. static
-    if (node.static?[segment] case final Node<T> childNode) {
-      result
-          .addAll(_collectMatches(ctx, childNode, method, segments, index + 1));
+    // 1. 收集静态节点的匹配
+    if (node.static.containsKey(segment)) {
+      result.addAll(
+          _collectMatches(node.static[segment]!, method, segments, index + 1));
     }
 
-    // 2. param
-    if (node.param case final Node<T> childNode) {
-      result
-          .addAll(_collectMatches(ctx, childNode, method, segments, index + 1));
+    // 2. 收集参数节点的匹配
+    if (node.param != null) {
+      result.addAll(_collectMatches(node.param!, method, segments, index + 1));
     }
 
-    // 3. wildcard
-    if (node.wildcard case Node<T>(methods: final methodMap)
-        when methodMap != null) {
-      result.addAll(methodMap[method] ?? []);
-      result.addAll(methodMap[''] ?? []);
+    // 3. 收集通配符节点的匹配
+    if (node.wildcard != null && node.wildcard!.methods != null) {
+      result.addAll(node.wildcard!.methods?[method] ?? []);
+      result.addAll(node.wildcard!.methods?[''] ?? []);
     }
 
     return result;
   }
 
-  bool _removeMethodData(Node<T> node, String? method, T? data) {
+  // 内部方法：从节点中删除路由数据
+  bool _removeFromNode(_RouterNode<T> node, String? method, T? data) {
     if (node.methods == null) return false;
 
-    final methods = node.methods![method ?? ''];
-    if (methods == null) return false;
+    final methodKey = method ?? '';
+    if (!node.methods!.containsKey(methodKey)) return false;
 
-    final initialLength = methods.length;
+    final routes = node.methods![methodKey]!;
+    final initialLength = routes.length;
+
     if (data != null) {
-      methods.removeWhere((item) => item.data == data);
+      routes.removeWhere((route) => route.data == data);
     } else {
-      methods.clear();
+      routes.clear();
     }
 
-    if (methods.isEmpty) {
-      node.methods!.remove(method ?? '');
+    if (routes.isEmpty) {
+      node.methods!.remove(methodKey);
     }
 
     if (node.methods!.isEmpty) {
       node.methods = null;
     }
 
-    return initialLength != methods.length;
+    return initialLength != routes.length;
   }
 
+  // 内部方法：从路由树中删除路由
   bool _removeFromTree(
-    Node<T> node,
+    _RouterNode<T> node,
     String? method,
-    Iterable<String> segments,
+    List<String> segments,
     int index,
     T? data,
   ) {
+    // 到达路径末尾
     if (index == segments.length) {
-      return _removeMethodData(node, method, data);
+      return _removeFromNode(node, method, data);
     }
 
-    final segment = segments.elementAt(index);
+    final segment = segments[index];
     var removed = false;
 
-    // Check wildcard node
+    // 处理通配符路径段
     if (segment.startsWith('**')) {
       if (node.wildcard != null) {
-        removed = _removeMethodData(node.wildcard!, method, data);
-        if (node.wildcard!.methods == null &&
-            node.wildcard!.static == null &&
-            node.wildcard!.param == null &&
-            node.wildcard!.wildcard == null) {
+        removed = _removeFromNode(node.wildcard!, method, data);
+        if (node.wildcard!.isEmpty) {
           node.wildcard = null;
         }
       }
       return removed;
     }
 
-    // Check param node
+    // 处理参数路径段
     if (segment == '*' || segment.startsWith(':')) {
       if (node.param != null) {
         removed =
             _removeFromTree(node.param!, method, segments, index + 1, data);
-        if (node.param!.methods == null &&
-            node.param!.static == null &&
-            node.param!.param == null &&
-            node.param!.wildcard == null) {
+        if (node.param!.isEmpty) {
           node.param = null;
         }
       }
       return removed;
     }
 
-    // Check static nodes
-    if (node.static != null && node.static!.containsKey(segment)) {
-      final staticNode = node.static![segment]!;
-      removed = _removeFromTree(staticNode, method, segments, index + 1, data);
-      if (staticNode.methods == null &&
-          staticNode.static == null &&
-          staticNode.param == null &&
-          staticNode.wildcard == null) {
-        node.static!.remove(segment);
-      }
-      if (node.static!.isEmpty) {
-        node.static = null;
+    // 处理静态路径段
+    if (node.static.containsKey(segment)) {
+      final childNode = node.static[segment]!;
+      removed = _removeFromTree(childNode, method, segments, index + 1, data);
+      if (childNode.isEmpty) {
+        node.static.remove(segment);
       }
     }
 
     return removed;
   }
-}
 
-// 内部辅助方法 - 创建路由器上下文
-RouterContext<T> _createContext<T>() {
-  return _ContextImpl<T>();
-}
-
-// 内部实现 - 路由器上下文
-class _ContextImpl<T> implements RouterContext<T> {
-  @override
-  final Node<T> root = NodeImpl("<root>");
-
-  @override
-  final Map<String, Node<T>> static = {};
-}
-
-// 内部方法 - 创建参数匹配器
-Pattern _createParamsMatcher(String segment) {
-  if (!segment.contains(':', 1)) {
-    return segment.substring(1);
+  // 辅助方法
+  bool _hasOptionalLastParam(List<_RouteData<T>> routes) {
+    return routes.isNotEmpty && _isLastParamOptional(routes.first);
   }
 
-  final source = segment.replaceAllMapped(
-    RegExp(r':(\w+)'),
-    (match) => '(?<${match.group(1)}>\\w+)',
-  );
+  bool _isLastParamOptional(_RouteData<T> routeData) {
+    return routeData.params?.lastOrNull?.optional == true;
+  }
 
-  return RegExp(source);
-}
+  // 路径转换工具
+  List<String> _pathToSegments(String path) =>
+      path.split('/').where((segment) => segment.isNotEmpty).toList();
 
-// 从utils.dart导入的功能
-Iterable<String> toPathSegments(String path) =>
-    path.split('/').where((segment) => segment.isNotEmpty);
+  String _segmentsToPath(List<String> segments) => segments.join('/');
 
-String toSegmentsPath(Iterable<String> segments) =>
-    segments.where((segment) => segment.isNotEmpty).join('/');
-
-Map<String, String>? toMatchedRouteParams(
-    ParamsMetadata? params, Iterable<String> segments) {
-  if (params == null) return null;
-
-  final results = <String, String>{};
-  for (final (:index, :name, optional: _) in params) {
-    final value = switch (index) {
-      < 0 => toSegmentsPath(segments.skip(-1 * index)),
-      _ => segments.elementAtOrNull(index),
-    };
-
-    if (value == null) continue;
-    if (name is RegExp) {
-      for (final match in name.allMatches(value)) {
-        final entries = match.groupNames
-            .map((name) => MapEntry(name, match.namedGroup(name)))
-            .where((e) => e.value != null)
-            .cast<MapEntry<String, String>>();
-
-        results.addEntries(entries);
-      }
-
-      continue;
+  // 创建参数模式
+  Pattern _createParamPattern(String segment) {
+    if (!segment.contains(':', 1)) {
+      return segment.substring(1);
     }
 
-    results[name.toString()] = value;
+    final source = segment.replaceAllMapped(
+      RegExp(r':(\w+)'),
+      (match) => '(?<${match.group(1)}>\\w+)',
+    );
+
+    return RegExp(source);
   }
 
-  return results;
+  // 提取匹配的参数
+  Map<String, String>? _extractParams(
+    List<_ParamInfo>? params,
+    List<String> segments,
+  ) {
+    if (params == null) return null;
+
+    final result = <String, String>{};
+    for (final param in params) {
+      final index = param.index;
+      final value = index < 0
+          ? segments.skip(-1 * index).join('/')
+          : index < segments.length
+              ? segments[index]
+              : null;
+
+      if (value == null) continue;
+
+      if (param.name is RegExp) {
+        final regex = param.name as RegExp;
+        for (final match in regex.allMatches(value)) {
+          for (final name in match.groupNames) {
+            final groupValue = match.namedGroup(name);
+            if (groupValue != null) {
+              result[name] = groupValue;
+            }
+          }
+        }
+      } else {
+        result[param.name.toString()] = value;
+      }
+    }
+
+    return result.isNotEmpty ? result : null;
+  }
+}
+
+/// 内部类：路由节点
+class _RouterNode<T> {
+  _RouterNode(this.key);
+
+  final String key;
+  final Map<String, _RouterNode<T>> static = {};
+  _RouterNode<T>? param;
+  _RouterNode<T>? wildcard;
+  Map<String, List<_RouteData<T>>>? methods;
+
+  bool get isEmpty =>
+      methods == null && static.isEmpty && param == null && wildcard == null;
+}
+
+/// 内部类：路由数据
+class _RouteData<T> {
+  _RouteData({required this.data, this.params});
+
+  final T data;
+  final List<_ParamInfo>? params;
+}
+
+/// 内部类：参数信息
+class _ParamInfo {
+  _ParamInfo({
+    required this.index,
+    required this.name,
+    required this.optional,
+  });
+
+  final int index;
+  final Pattern name;
+  final bool optional;
 }
