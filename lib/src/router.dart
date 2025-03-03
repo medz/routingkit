@@ -12,7 +12,7 @@ class _RouterImpl<T> implements Router<T> {
   /// Creates a new router instance
   ///
   /// [anyMethodToken] is the token used to represent any HTTP method
-  _RouterImpl({this.anyMethodToken = 'routerkit-method://any'});
+  _RouterImpl({required this.anyMethodToken});
 
   /// Token used to represent any HTTP method
   @override
