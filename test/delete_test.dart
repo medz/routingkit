@@ -1,6 +1,5 @@
 import 'package:routingkit/routingkit.dart';
 import 'package:test/test.dart';
-import 'utils/create_test_router.dart';
 
 void main() {
   group('Router Remove Operation Tests', () {
