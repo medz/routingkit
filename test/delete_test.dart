@@ -1,52 +1,146 @@
 import 'package:routingkit/routingkit.dart';
 import 'package:test/test.dart';
+import 'utils/create_test_router.dart';
 
 void main() {
-  test('理解Router行为', () {
-    // 创建全新的路由器实例
-    final router = createRouter<String>();
+  group('Router Remove Operation Tests', () {
+    test('Router.remove should correctly remove static routes', () {
+      final router = createRouter<String>();
 
-    // 先查看当前状态
-    final initial = router.findAll('GET', '/test');
-    print('初始状态: ${initial.length} 条路由');
+      // Clear the route if it already exists
+      while (router.remove('GET', '/test-route')) {}
 
-    // 不管当前状态如何，尝试清空所有路由
-    bool removed;
-    do {
-      removed = router.remove('GET', '/test');
-      if (removed) {
-        print('删除了一个路由');
-      }
-    } while (removed);
+      // Add a route
+      router.add('GET', '/test-route', 'test-data');
 
-    // 验证清空成功
-    final afterClear = router.findAll('GET', '/test');
-    print('清空后: ${afterClear.length} 条路由');
-    expect(afterClear.length, equals(0));
+      // Verify the route exists
+      expect(router.find('GET', '/test-route')?.data, equals('test-data'));
 
-    // 添加单个路由
-    router.add('GET', '/test', 'test1');
-    final afterAdd1 = router.findAll('GET', '/test');
-    print(
-        '添加一条后: ${afterAdd1.length} 条路由, 数据: ${afterAdd1.map((r) => r.data).toList()}');
+      // Remove the route
+      expect(router.remove('GET', '/test-route'), isTrue);
 
-    // 添加另一个路由
-    router.add('GET', '/test', 'test2');
-    final afterAdd2 = router.findAll('GET', '/test');
-    print(
-        '添加两条后: ${afterAdd2.length} 条路由, 数据: ${afterAdd2.map((r) => r.data).toList()}');
+      // Verify the route no longer exists
+      expect(router.find('GET', '/test-route'), isNull);
+    });
 
-    // 删除第二个路由
-    final removedData = router.remove('GET', '/test', 'test2');
-    print('删除特定数据: $removedData');
+    test('Router.remove should correctly remove parameter routes', () {
+      final router = createRouter<String>();
 
-    // 查看删除后的状态
-    final afterRemove = router.findAll('GET', '/test');
-    print(
-        '删除一条后: ${afterRemove.length} 条路由, 数据: ${afterRemove.map((r) => r.data).toList()}');
+      // Clear the route if it already exists
+      while (router.remove('GET', '/users/:id')) {}
 
-    // 检查Router.find的行为
-    final findResult = router.find('GET', '/test');
-    print('find结果: ${findResult?.data}');
+      // Add a parameter route
+      router.add('GET', '/users/:id', 'user-data');
+
+      // Verify the route matches
+      expect(router.find('GET', '/users/123')?.data, equals('user-data'));
+
+      // Remove the route
+      expect(router.remove('GET', '/users/:id'), isTrue);
+
+      // Verify the route no longer matches
+      expect(router.find('GET', '/users/123'), isNull);
+    });
+
+    test('Router.remove should correctly remove wildcard routes', () {
+      final router = createRouter<String>();
+
+      // Clear the route if it already exists
+      while (router.remove('GET', '/api/**')) {}
+
+      // Add a wildcard route
+      router.add('GET', '/api/**', 'api-data');
+
+      // Verify the route matches
+      expect(router.find('GET', '/api/users/123')?.data, equals('api-data'));
+
+      // Remove the route
+      expect(router.remove('GET', '/api/**'), isTrue);
+
+      // Verify the route no longer matches
+      expect(router.find('GET', '/api/users/123'), isNull);
+    });
+
+    test('Router.remove should return false for non-existent routes', () {
+      final router = createRouter<String>();
+
+      // Ensure route doesn't exist
+      while (router.remove('GET', '/non-existent')) {}
+
+      // Attempt to remove a non-existent route
+      expect(router.remove('GET', '/non-existent'), isFalse);
+    });
+
+    test('Router.remove should remove routes with data match', () {
+      final router = createRouter<String>();
+
+      // Clear the routes
+      while (router.remove('GET', '/multi-data')) {}
+
+      // Add multiple routes with the same path but different data
+      router.add('GET', '/multi-data', 'data1');
+      router.add('GET', '/multi-data', 'data2');
+      router.add('GET', '/multi-data', 'data3');
+
+      // Find and print all routes before removal
+      final beforeRoutes = router.findAll('GET', '/multi-data');
+      final beforeData = beforeRoutes.map((r) => r.data).toList();
+      print('Routes before removal: $beforeData');
+
+      // Remove a route with specific data
+      expect(router.remove('GET', '/multi-data', 'data2'), isTrue);
+
+      // Find and verify remaining routes
+      final afterRoutes = router.findAll('GET', '/multi-data');
+      final afterData = afterRoutes.map((r) => r.data).toList();
+      print('Routes after removal: $afterData');
+
+      // Verify data2 was removed
+      expect(afterData, contains('data1'));
+      expect(afterData, contains('data3'));
+      expect(afterData, isNot(contains('data2')));
+
+      // Verify the count decreased
+      expect(afterRoutes.length, lessThan(beforeRoutes.length));
+    });
+
+    test('Router.remove should not remove other HTTP methods', () {
+      final router = createRouter<String>();
+
+      // Clear the routes
+      while (router.remove('GET', '/method-test')) {}
+      while (router.remove('POST', '/method-test')) {}
+
+      // Add routes with different HTTP methods
+      router.add('GET', '/method-test', 'get-data');
+      router.add('POST', '/method-test', 'post-data');
+
+      // Remove only the GET route
+      expect(router.remove('GET', '/method-test'), isTrue);
+
+      // Verify GET route was removed but POST remains
+      expect(router.find('GET', '/method-test'), isNull);
+      expect(router.find('POST', '/method-test')?.data, equals('post-data'));
+    });
+
+    test('Router.remove should handle complex path patterns', () {
+      final router = createRouter<String>();
+
+      // Clear the routes
+      while (router.remove('GET', '/api/users/:id/posts/:postId')) {}
+
+      // Add complex parameter route
+      router.add('GET', '/api/users/:id/posts/:postId', 'complex-data');
+
+      // Verify route matches
+      expect(router.find('GET', '/api/users/123/posts/456')?.data,
+          equals('complex-data'));
+
+      // Remove route
+      expect(router.remove('GET', '/api/users/:id/posts/:postId'), isTrue);
+
+      // Verify route no longer matches
+      expect(router.find('GET', '/api/users/123/posts/456'), isNull);
+    });
   });
 }

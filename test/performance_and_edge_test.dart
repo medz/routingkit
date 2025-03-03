@@ -4,12 +4,12 @@ import 'package:test/test.dart';
 import 'utils/create_test_router.dart';
 
 void main() {
-  group('性能测试', () {
-    test('大规模路由添加和查找', () {
+  group('Performance Tests', () {
+    test('Large-scale route adding and finding', () {
       final router = createRouter<String>();
       final int routeCount = 1000;
 
-      // 计时添加路由
+      // Measure time to add routes
       final addStart = DateTime.now();
 
       for (var i = 0; i < routeCount; i++) {
@@ -17,9 +17,9 @@ void main() {
       }
 
       final addDuration = DateTime.now().difference(addStart);
-      print('添加 $routeCount 个路由耗时: ${addDuration.inMilliseconds}ms');
+      print('Adding $routeCount routes took: ${addDuration.inMilliseconds}ms');
 
-      // 计时查找静态路由
+      // Measure time to find static routes
       final staticStart = DateTime.now();
 
       for (var i = 0; i < routeCount; i++) {
@@ -27,9 +27,10 @@ void main() {
       }
 
       final staticDuration = DateTime.now().difference(staticStart);
-      print('查找 $routeCount 个静态路由耗时: ${staticDuration.inMilliseconds}ms');
+      print(
+          'Finding $routeCount static routes took: ${staticDuration.inMilliseconds}ms');
 
-      // 计时查找不存在的路由
+      // Measure time to find non-existent routes
       final notFoundStart = DateTime.now();
 
       for (var i = 0; i < routeCount; i++) {
@@ -37,106 +38,107 @@ void main() {
       }
 
       final notFoundDuration = DateTime.now().difference(notFoundStart);
-      print('查找 $routeCount 个不存在的路由耗时: ${notFoundDuration.inMilliseconds}ms');
+      print(
+          'Finding $routeCount non-existent routes took: ${notFoundDuration.inMilliseconds}ms');
 
-      // 确保性能在合理范围内
+      // Ensure performance is within reasonable range
       expect(addDuration.inMilliseconds / routeCount < 1, isTrue,
-          reason: '每个路由的添加时间应该小于1毫秒');
+          reason: 'Each route should take less than 1ms to add');
       expect(staticDuration.inMilliseconds / routeCount < 1, isTrue,
-          reason: '每个静态路由的查找时间应该小于1毫秒');
+          reason: 'Each static route should take less than 1ms to find');
       expect(notFoundDuration.inMilliseconds / routeCount < 1, isTrue,
-          reason: '每个不存在路由的查找时间应该小于1毫秒');
+          reason: 'Each non-existent route should take less than 1ms to find');
     });
 
-    test('多个参数路由', () {
+    test('Multiple parameter routes', () {
       final router = createRouter<String>();
 
       router.add('GET', '/user/:id/profile/:field', 'user-profile');
       router.add('GET', '/user/:id/settings', 'user-settings');
 
-      // 测试第一个路由
+      // Test first route
       final profileResult = router.find('GET', '/user/123/profile/name');
       expect(profileResult?.data, equals('user-profile'));
       expect(profileResult?.params, equals({'id': '123', 'field': 'name'}));
 
-      // 测试第二个路由
+      // Test second route
       final settingsResult = router.find('GET', '/user/123/settings');
       expect(settingsResult?.data, equals('user-settings'));
       expect(settingsResult?.params, equals({'id': '123'}));
     });
   });
 
-  group('无效输入处理', () {
-    test('无效路径处理', () {
+  group('Invalid Input Handling', () {
+    test('Invalid path handling', () {
       final router = createRouter<String>();
 
-      // 尝试添加空路由路径
+      // Try adding empty route path
       router.add('GET', '', 'empty-path');
 
-      // 空路径应该被规范化为根路径
+      // Empty path should be normalized to root path
       expect(router.find('GET', '')?.data, equals('empty-path'));
       expect(router.find('GET', '/')?.data, equals('empty-path'));
 
-      // 尝试添加格式不规范的路径
+      // Try adding path without leading slash
       router.add('GET', 'no-leading-slash', 'no-leading-slash');
 
-      // 应该能够匹配规范化后的路径
+      // Should match normalized path
       expect(router.find('GET', 'no-leading-slash')?.data,
           equals('no-leading-slash'));
       expect(router.find('GET', '/no-leading-slash')?.data,
           equals('no-leading-slash'));
     });
 
-    test('无效HTTP方法处理', () {
+    test('Invalid HTTP method handling', () {
       final router = createRouter<String>();
 
-      // 添加不同大小写的HTTP方法
+      // Add HTTP methods with different cases
       router.add('get', '/case-test', 'lowercase-get');
       router.add('GET', '/case-test', 'uppercase-get');
       router.add('Get', '/case-test', 'mixedcase-get');
 
-      // 验证HTTP方法大小写敏感
+      // Verify HTTP method case sensitivity
       expect(router.find('get', '/case-test')?.data, equals('lowercase-get'));
       expect(router.find('GET', '/case-test')?.data, equals('uppercase-get'));
       expect(router.find('Get', '/case-test')?.data, equals('mixedcase-get'));
 
-      // 添加非标准HTTP方法
+      // Add non-standard HTTP method
       router.add('CUSTOM_METHOD', '/custom', 'custom-method');
 
-      // 非标准HTTP方法也应能匹配
+      // Non-standard HTTP method should also match
       expect(router.find('CUSTOM_METHOD', '/custom')?.data,
           equals('custom-method'));
     });
 
-    test('特殊字符处理', () {
+    test('Special character handling', () {
       final router = createRouter<String>();
 
-      // 添加包含特殊字符的路径
+      // Add path with special characters
       router.add('GET', '/special/chars', 'special-chars');
 
-      // 特殊字符路径应能正常匹配
+      // Special character path should match normally
       expect(
           router.find('GET', '/special/chars')?.data, equals('special-chars'));
     });
   });
 
-  group('复杂逻辑组合测试', () {
-    test('组合多种类型的路由', () {
+  group('Complex Logic Combination Tests', () {
+    test('Combining multiple route types', () {
       final router = createRouter<String>();
 
-      // 清除可能存在的路由
+      // Clear any existing routes
       router.remove('GET', '/multi-match/specific');
       router.remove('GET', '/multi-match/:param');
       router.remove(null, '/multi-match/:param');
 
-      // 添加不同类型的路由组合
+      // Add combination of different route types
       router.add('GET', '/api/users', 'users-list');
       router.add('GET', '/api/users/:id', 'user-detail');
       router.add('POST', '/api/users/:id', 'user-update');
       router.add(null, '/api/public/**', 'public-api');
       router.add('GET', '/api/admin/:section/*/**', 'admin-wildcard');
 
-      // 测试各种组合的查找
+      // Test various combinations of lookups
       expect(router.find('GET', '/api/users')?.data, equals('users-list'));
       expect(router.find('GET', '/api/users/123')?.data, equals('user-detail'));
       expect(
@@ -144,22 +146,23 @@ void main() {
       expect(router.find('DELETE', '/api/public/docs')?.data,
           equals('public-api'));
 
-      // 测试复杂的通配符和参数组合
+      // Test complex wildcard and parameter combination
       final adminResult =
           router.find('GET', '/api/admin/reports/monthly/2023/04');
       expect(adminResult?.data, equals('admin-wildcard'));
       expect(adminResult?.params?['section'], equals('reports'));
 
-      // 测试findAll的复杂场景（重新创建一个新的路由器以避免与之前的测试冲突）
+      // Test findAll complex scenario (create new router to avoid conflicts)
       final multiRouter = createRouter<String>();
       multiRouter.add(null, '/multi-match/:param', 'multi-1');
       multiRouter.add('GET', '/multi-match/:param', 'multi-2');
       multiRouter.add('GET', '/multi-match/specific', 'multi-3');
 
       final multiMatches = multiRouter.findAll('GET', '/multi-match/specific');
-      expect(multiMatches.length, greaterThanOrEqualTo(2)); // 至少应该匹配2个路由
+      expect(multiMatches.length,
+          greaterThanOrEqualTo(2)); // Should match at least 2 routes
 
-      // 验证静态路由存在于结果中
+      // Verify static route exists in results
       expect(multiMatches.map((r) => r.data).toList(), contains('multi-3'));
     });
   });
