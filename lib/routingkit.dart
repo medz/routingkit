@@ -9,19 +9,19 @@
 /// - Type-safe route handlers
 ///
 /// Key components:
-/// - [RouterContext]: The main router instance
-/// - [addRoute]: Add new routes to the router
-/// - [findRoute]: Find a single matching route
-/// - [findAllRoutes]: Find all matching routes
-/// - [removeRoute]: Remove a route from the router
+/// - [Router]: The main router class for managing routes
+/// - [createRouter]: Creates a new router instance
+///
+/// Example usage:
+/// ```dart
+/// final router = createRouter<String>();
+/// router.add('GET', '/path', 'static route');
+/// router.add('POST', '/path/:name', 'name route');
+/// print(router.find('GET', '/path')); // => {data: static route}
+/// ```
 ///
 /// ![Pub version](https://img.shields.io/pub/v/routingkit?logo=dart)
 library routingkit;
 
-export 'src/types.dart';
-export 'src/context.dart';
-
-export 'src/operations/add_route.dart';
-export 'src/operations/find_all_routes.dart';
-export 'src/operations/find_route.dart';
-export 'src/operations/remove_route.dart';
+export 'src/router.dart';
+export 'src/types.dart' show MatchedRoute;
