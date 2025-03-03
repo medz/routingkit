@@ -1,20 +1,20 @@
-/// 匹配的路由结果
+/// Matched route result
 ///
-/// 泛型类型 [T] 表示与路由关联的数据类型
+/// Generic type [T] represents the data type associated with the route
 class MatchedRoute<T> {
-  /// 创建一个新的匹配路由结果
+  /// Creates a new matched route result
   ///
-  /// [data] 与匹配路由关联的数据
-  /// [params] 匹配路由的参数，可以为null
+  /// [data] The data associated with the matched route
+  /// [params] Parameters of the matched route, can be null
   MatchedRoute({
     required this.data,
     this.params,
   });
 
-  /// 与匹配路由关联的数据
+  /// Data associated with the matched route
   final T data;
 
-  /// 路由中提取的参数，如果没有参数则为null
+  /// Parameters extracted from the route, null if no parameters
   final Map<String, String>? params;
 
   @override
