@@ -1,3 +1,11 @@
+## 5.1.0
+
+### New Features
+
+- Added `caseSensitive` parameter to `createRouter` function to configure case sensitivity for path matching (defaults to `true`)
+- Added `caseSensitive` property to the `Router` interface to indicate the router's case sensitivity setting
+- Parameter names (like `:ID`) maintain their original case even in case-insensitive mode
+
 ## 5.0.1
 
 ### Bug Fixes

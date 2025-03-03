@@ -156,4 +156,43 @@ void main() {
           equals('any-api')); // Any method should match
     });
   });
+
+  group('Case Sensitivity', () {
+    test('Case sensitive matching (default)', () {
+      final router = createRouter<String>();
+
+      router.add('GET', '/Users', 'users-uppercase');
+      router.add('GET', '/users', 'users-lowercase');
+
+      expect(router.find('GET', '/Users')?.data, equals('users-uppercase'));
+      expect(router.find('GET', '/users')?.data, equals('users-lowercase'));
+      expect(router.find('GET', '/USERS'), isNull);
+    });
+
+    test('Case insensitive matching', () {
+      final router = createRouter<String>(caseSensitive: false);
+
+      router.add('GET', '/Users', 'users-route');
+
+      // All these should match the same route regardless of case
+      expect(router.find('GET', '/Users')?.data, equals('users-route'));
+      expect(router.find('GET', '/users')?.data, equals('users-route'));
+      expect(router.find('GET', '/USERS')?.data, equals('users-route'));
+      expect(router.find('GET', '/uSeRs')?.data, equals('users-route'));
+    });
+
+    test('Case insensitive with parameters', () {
+      final router = createRouter<String>(caseSensitive: false);
+
+      router.add('GET', '/Users/:ID', 'user-detail');
+
+      final result1 = router.find('GET', '/users/123');
+      expect(result1?.data, equals('user-detail'));
+      expect(result1?.params, equals({'ID': '123'}));
+
+      final result2 = router.find('GET', '/USERS/456');
+      expect(result2?.data, equals('user-detail'));
+      expect(result2?.params, equals({'ID': '456'}));
+    });
+  });
 }

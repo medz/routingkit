@@ -4,19 +4,34 @@ import 'types.dart';
 ///
 /// Generic type [T] represents the data type associated with routes
 /// [anyMethodToken] is the token used to represent any HTTP method, defaults to 'routerkit-method://any'
-Router<T> createRouter<T>({String anyMethodToken = 'routerkit-method://any'}) =>
-    _RouterImpl<T>(anyMethodToken: anyMethodToken);
+/// [caseSensitive] determines whether path matching is case sensitive, defaults to true
+Router<T> createRouter<T>({
+  String anyMethodToken = 'routerkit-method://any',
+  bool caseSensitive = true,
+}) =>
+    _RouterImpl<T>(
+      anyMethodToken: anyMethodToken,
+      caseSensitive: caseSensitive,
+    );
 
 /// Internal implementation of Router interface
 class _RouterImpl<T> implements Router<T> {
   /// Creates a new router instance
   ///
   /// [anyMethodToken] is the token used to represent any HTTP method
-  _RouterImpl({required this.anyMethodToken});
+  /// [caseSensitive] determines whether path matching is case sensitive
+  _RouterImpl({
+    this.anyMethodToken = 'routerkit-method://any',
+    this.caseSensitive = true,
+  });
 
   /// Token used to represent any HTTP method
   @override
   final String anyMethodToken;
+
+  /// Whether path matching is case sensitive
+  @override
+  final bool caseSensitive;
 
   /// Root node
   final _root = _RouterNode<T>('');
@@ -592,6 +607,17 @@ class _RouterImpl<T> implements Router<T> {
     // Split path into segments and remove empty segments
     final segments = cleanPath.split('/').where((s) => s.isNotEmpty).toList();
 
+    // Apply case insensitivity if needed, but preserve parameter names
+    if (!caseSensitive) {
+      for (int i = 0; i < segments.length; i++) {
+        final segment = segments[i];
+        // Only convert non-parameter segments to lowercase
+        if (!segment.startsWith(':') && !segment.startsWith('*')) {
+          segments[i] = segment.toLowerCase();
+        }
+      }
+    }
+
     // Process segments for special format parameters like ':filename.:format?'
     for (int i = 0; i < segments.length; i++) {
       final segment = segments[i];
@@ -635,6 +661,7 @@ class _RouterImpl<T> implements Router<T> {
       // Extract just the parameter name for pattern creation
       return segment.split(' with ')[0].substring(1);
     }
+    // Return the original parameter name without ':' prefix, preserving case
     return segment.substring(1);
   }
 

@@ -28,6 +28,9 @@ abstract class Router<T> {
   /// Token used to represent any HTTP method
   String get anyMethodToken;
 
+  /// Whether path matching is case sensitive
+  bool get caseSensitive;
+
   /// Adds a new route to the router
   ///
   /// [method] HTTP method like 'GET', 'POST', etc. If null, matches any method
