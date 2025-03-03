@@ -3,11 +3,19 @@ import 'types.dart';
 /// Creates a new router instance
 ///
 /// Generic type [T] represents the data type associated with routes
-Router<T> createRouter<T>() => Router<T>();
+/// [anyMethodToken] is the token used to represent any HTTP method, defaults to 'routerkit-method://any'
+Router<T> createRouter<T>({String anyMethodToken = 'routerkit-method://any'}) =>
+    Router<T>(anyMethodToken: anyMethodToken);
 
 /// Router class, provides route management and matching functionality
 class Router<T> {
-  Router();
+  /// Creates a new router instance
+  ///
+  /// [anyMethodToken] is the token used to represent any HTTP method
+  Router({this.anyMethodToken = 'routerkit-method://any'});
+
+  /// Token used to represent any HTTP method
+  final String anyMethodToken;
 
   /// Root node
   final _root = _RouterNode<T>('');
@@ -126,10 +134,12 @@ class Router<T> {
     );
 
     // Only add the route if it doesn't already exist for this method
-    if (!(node.methods?[normalizedMethod ?? '']?.any((r) => r.data == data) ??
+    if (!(node.methods?[normalizedMethod ?? anyMethodToken]
+            ?.any((r) => r.data == data) ??
         false)) {
-      (node.methods ??= {})[normalizedMethod ?? ''] =
-          ((node.methods?[normalizedMethod ?? ''] ?? [])..add(routeData));
+      (node.methods ??= {})[normalizedMethod ?? anyMethodToken] =
+          ((node.methods?[normalizedMethod ?? anyMethodToken] ?? [])
+            ..add(routeData));
     }
 
     // If it's a pure static path, add to static route mapping
@@ -168,7 +178,7 @@ class Router<T> {
       }
 
       // Then check for wildcard method match (method is null)
-      final wildcardMethodValues = node.methods?[''];
+      final wildcardMethodValues = node.methods?[anyMethodToken];
       if (wildcardMethodValues != null && wildcardMethodValues.isNotEmpty) {
         return MatchedRoute(
           data: wildcardMethodValues.first.data,
@@ -217,12 +227,12 @@ class Router<T> {
 
       // Add wildcard method matches (method is '')
       _addMatchedRoutes(
-          result, node.methods?[''] ?? [], segments, includeParams);
+          result, node.methods?[anyMethodToken] ?? [], segments, includeParams);
 
       // If request method is null, add routes for all methods
       if (normalizedMethod == null && node.methods != null) {
         for (final entry in node.methods!.entries) {
-          if (entry.key.isNotEmpty) {
+          if (entry.key != anyMethodToken) {
             // Skip wildcard method since it's already added
             _addMatchedRoutes(result, entry.value, segments, includeParams);
           }
@@ -302,8 +312,8 @@ class Router<T> {
         }
 
         // Then check for wildcard method match (method is '')
-        if (node.methods!.containsKey('')) {
-          return node.methods![''];
+        if (node.methods!.containsKey(anyMethodToken)) {
+          return node.methods![anyMethodToken];
         }
 
         // If method is null, should return null as caller needs to manually handle all methods
@@ -356,9 +366,22 @@ class Router<T> {
           return node.wildcard!.methods![method];
         }
 
-        // Then check for wildcard method match (method is '')
-        if (node.wildcard!.methods!.containsKey('')) {
-          return node.wildcard!.methods![''];
+        // Then check for wildcard method match
+        if (node.wildcard!.methods!.containsKey(anyMethodToken)) {
+          return node.wildcard!.methods![anyMethodToken];
+        }
+
+        // If method is null, gather all methods except wildcard
+        if (method == null) {
+          final allMatches = <_RouteData<T>>[];
+          for (final entry in node.wildcard!.methods!.entries) {
+            if (entry.key != anyMethodToken) {
+              allMatches.addAll(entry.value);
+            }
+          }
+          if (allMatches.isNotEmpty) {
+            return allMatches;
+          }
         }
       }
     }
@@ -385,14 +408,14 @@ class Router<T> {
         }
 
         // Add wildcard method matches (method is '')
-        if (node.methods!.containsKey('')) {
-          matches.addAll(node.methods![''] ?? []);
+        if (node.methods!.containsKey(anyMethodToken)) {
+          matches.addAll(node.methods![anyMethodToken] ?? []);
         }
 
         // If method is null, add all method matches
         if (method == null && node.methods != null) {
           for (final entry in node.methods!.entries) {
-            if (entry.key.isNotEmpty) {
+            if (entry.key != anyMethodToken) {
               // Skip wildcard method since it's already added
               matches.addAll(entry.value);
             }
@@ -436,9 +459,18 @@ class Router<T> {
           wildcardMatches.addAll(node.wildcard!.methods![method] ?? []);
         }
 
-        // Add wildcard method matches (method is '')
-        if (node.wildcard!.methods!.containsKey('')) {
-          wildcardMatches.addAll(node.wildcard!.methods![''] ?? []);
+        // Add wildcard method matches (method is anyMethodToken)
+        if (node.wildcard!.methods!.containsKey(anyMethodToken)) {
+          wildcardMatches.addAll(node.wildcard!.methods![anyMethodToken] ?? []);
+        }
+
+        // If method is null, add all method matches except wildcard
+        if (method == null) {
+          for (final entry in node.wildcard!.methods!.entries) {
+            if (entry.key != anyMethodToken) {
+              wildcardMatches.addAll(entry.value);
+            }
+          }
         }
       }
     }
@@ -455,14 +487,14 @@ class Router<T> {
   bool _removeFromNode(_RouterNode<T> node, String? method, T? data) {
     if (node.methods == null) return false;
 
-    final methodValues = node.methods![method ?? ''];
+    final methodValues = node.methods![method ?? anyMethodToken];
     if (methodValues == null) return false;
 
     final initialLength = methodValues.length;
     methodValues.removeWhere((r) => data == null || r.data == data);
 
     if (methodValues.isEmpty) {
-      node.methods!.remove(method ?? '');
+      node.methods!.remove(method ?? anyMethodToken);
     }
 
     if (node.methods!.isEmpty) {

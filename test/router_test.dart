@@ -112,4 +112,46 @@ void main() {
       expect(publicResult?.data, equals('public-api'));
     });
   });
+
+  group('Router Configuration', () {
+    test('Custom anyMethodToken', () {
+      // Create router with custom anyMethodToken
+      final router = createRouter<String>(anyMethodToken: 'ANY_METHOD');
+
+      // Add routes with different methods
+      router.add('GET', '/api', 'get-api');
+      router.add('POST', '/api', 'post-api');
+      router.add(null, '/api', 'any-api'); // Should use ANY_METHOD token
+
+      // Verify that find works with explicit methods
+      expect(router.find('GET', '/api')?.data, equals('get-api'));
+      expect(router.find('POST', '/api')?.data, equals('post-api'));
+
+      // Verify that null method uses anyMethodToken internally
+      expect(router.find(null, '/api')?.data, equals('any-api'));
+
+      // Verify findAll returns all matches
+      final allMatches = router.findAll(null, '/api');
+      // Note: findAll returns multiple entries when method is null - one for each explicit method
+      // plus the anyMethodToken entry
+      expect(allMatches.map((m) => m.data).contains('get-api'), isTrue);
+      expect(allMatches.map((m) => m.data).contains('post-api'), isTrue);
+      expect(allMatches.map((m) => m.data).contains('any-api'), isTrue);
+    });
+
+    test('Default anyMethodToken', () {
+      // Create router with default anyMethodToken
+      final router = createRouter<String>();
+
+      // Add routes with different methods
+      router.add('GET', '/api', 'get-api');
+      router.add(null, '/api', 'any-api'); // Should use default token
+
+      // Verify matching
+      expect(router.find('GET', '/api')?.data, equals('get-api'));
+      expect(router.find(null, '/api')?.data, equals('any-api'));
+      expect(router.find('POST', '/api')?.data,
+          equals('any-api')); // Any method should match
+    });
+  });
 }
