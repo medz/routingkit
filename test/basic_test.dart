@@ -21,7 +21,7 @@ void main() {
 
   test('lookup works', () {
     // Static
-    expect(findRoute(router, 'GET', '/test')?.data, equals('/test'));
-    expect(findRoute(router, 'GET', '/test/foo')?.data, equals('/test/foo'));
+    expect(router.find('GET', '/test')?.data, equals('/test'));
+    expect(router.find('GET', '/test/foo')?.data, equals('/test/foo'));
   });
 }
