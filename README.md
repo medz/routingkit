@@ -18,7 +18,7 @@ RoutingKit - A lightweight, high-performance router for Dart with an elegant obj
 - 🧩 **Flexible Routes**: Support for static, parameterized, and wildcard routes
 - 💪 **Type Safety**: Generic typing for your route handlers
 - 🔍 **Comprehensive Matching**: Find single or all matching routes
-- 🧰 **Object-Oriented API**: Clean, chainable methods for route management
+- 🧰 **Object-Oriented API**: Clean interface with clear separation of concerns
 - 🔠 **Case Sensitivity Options**: Configure whether path matching is case sensitive or not
 
 > **IMPORTANT NOTICE**: As of version 0.2.0, format parameter support (`:filename.:format?`) has been removed due to implementation complexity. Please use standard path parameters instead. See the [Migration Guides](#migration-guides) for details.
@@ -47,17 +47,11 @@ import 'package:routingkit/routingkit.dart';
 // Create a typed router (recommended)
 final router = createRouter<String>();
 
-// For handling different data types
-final dynamicRouter = createRouter<dynamic>();
-
-// Create a case-insensitive router
+// For case-insensitive routing
 final caseInsensitiveRouter = createRouter<String>(caseSensitive: false);
 
-// Configure both case sensitivity and custom anyMethodToken
-final customRouter = createRouter<String>(
-  caseSensitive: false,
-  anyMethodToken: 'ANY_METHOD',
-);
+// With custom 'any' method token (default is 'any')
+final customRouter = createRouter<String>(anyMethodToken: '*');
 ```
 
 ### Adding Routes

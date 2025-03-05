@@ -13,15 +13,26 @@ RoutingKit provides a flexible and efficient routing system with the following f
 
 ## Core Components
 
-- `Router` class: The main router class for managing routes
+- `Router` interface: Defines the contract for router implementations
 - `MatchedRoute`: Represents a matched route result
-- `createRouter()`: Creates a new router instance
+- `createRouter()`: Factory function to create a new router instance
 
 ## Code Structure
 
-- [lib/src/router.dart](lib/src/router.dart.md): Main routing implementation
-- [lib/src/types.dart](lib/src/types.dart.md): Defines core types like MatchedRoute
-- [lib/routingkit.dart](lib/routingkit.dart.md): Public API entry point
+The project has been refactored with a cleaner architecture:
+
+- `lib/routingkit.dart`: Public API entry point that exports only the necessary types
+- `lib/src/types.dart`: Defines the core interfaces and types
+- `lib/src/create_router.dart`: Factory function implementation
+- `lib/src/_internal/`: Contains internal implementation details:
+  - `router.dart`: Main router implementation
+  - `context.dart`: Shared state for the router
+  - `node.dart`: Trie node data structure
+  - `add_route.dart`: Route addition implementation
+  - `find_route.dart`: Single route matching
+  - `find_all_routes.dart`: Multiple route matching
+  - `remove_route.dart`: Route removal logic
+  - `utils.dart`: Shared utility functions
 
 ## Usage Example
 
@@ -37,34 +48,35 @@ router.add('GET', '/path', 'static route');
 router.add('POST', '/path/:name', 'name route');
 
 // Find routes
-print(router.find('GET', '/path')); // => {data: static route}
+final match = router.find('GET', '/path'); // => MatchedRoute{data: static route, params: {}}
 ```
 
 ## Feature Details
 
-- **Route Addition**: Add static routes, parameter routes, and wildcard routes
-- **Route Matching**: Find the first matching route or all matching routes
-- **Route Removal**: Remove routes by method, path, and data
-- **HTTP Method Matching**: Specify different handling logic for different HTTP methods
-- **Case Sensitivity**: Configure whether path matching is case-sensitive or not
+- **Static Routes**: Match exact paths (`/users`)
+- **Parameterized Routes**: Extract values from paths (`/users/:id` → `/users/123` extracts `id: '123'`)
+- **Optional Parameters**: Support for optional segments (`/files/:name?`)
+- **Wildcard Routes**: Match multiple segments (`/assets/**` matches any path starting with `/assets/`)
+- **HTTP Method Matching**: Different handlers for different HTTP methods
+- **Case Sensitivity Control**: Configure whether matching is case-sensitive
 
 ## API Reference
 
-### Router<T> Class
+### Router<T> Interface
 
-The `Router<T>` class is the core component of RoutingKit. It provides methods for managing and matching routes.
+The `Router<T>` interface defines the contract for router implementations with generic type `T` for route data.
 
 #### Properties:
 
 - `String anyMethodToken`: Token used to represent any HTTP method
 - `bool caseSensitive`: Whether path matching is case-sensitive
 
-#### Key Methods:
+#### Methods:
 
-- `void add(String? method, String path, T data)`: Adds a new route to the router
-- `MatchedRoute<T>? find(String? method, String path, {bool includeParams = true})`: Finds the first route matching the given path and method
-- `List<MatchedRoute<T>> findAll(String? method, String path, {bool includeParams = true})`: Finds all routes matching the given path and method
-- `bool remove(String? method, String path, [T? data])`: Removes a route from the router
+- `void add(String? method, String path, T data)`: Adds a new route
+- `MatchedRoute<T>? find(String? method, String path)`: Finds the first matching route
+- `Iterable<MatchedRoute<T>> findAll(String? method, String path)`: Finds all matching routes
+- `void remove(String? method, String path)`: Removes a route
 
 ### MatchedRoute<T> Class
 
@@ -73,7 +85,7 @@ The `MatchedRoute<T>` class represents a matched route result.
 #### Properties:
 
 - `T data`: Data associated with the matched route
-- `Map<String, String>? params`: Parameters extracted from the route, null if no parameters
+- `Map<String, String> params`: Parameters extracted from the route
 
 ### createRouter<T> Function
 
@@ -81,5 +93,5 @@ Creates a new router instance with the specified configuration.
 
 #### Parameters:
 
-- `String anyMethodToken`: Token used to represent any HTTP method, defaults to 'routerkit-method://any'
+- `String anyMethodToken`: Token used to represent any HTTP method, defaults to 'any'
 - `bool caseSensitive`: Whether path matching is case-sensitive, defaults to true 
