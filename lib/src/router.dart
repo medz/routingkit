@@ -637,32 +637,52 @@ class _RouterImpl<T> implements Router<T> {
 
   // Internal method: Convert path to segments
   List<String> _pathToSegments(String path) {
-    // Normalize the path by removing any trailing slashes
-    final normalizedPath = path.endsWith('/') && path.length > 1
+    // Step 1: Normalize the path
+    final normalizedPath = _normalizePath(path);
+
+    // Step 2: Extract path segments
+    final segments = _extractPathSegments(normalizedPath);
+
+    // Step 3: Apply case sensitivity rules if needed
+    return _applyCaseSensitivityRules(segments);
+  }
+
+  // Helper method: Normalize path by removing trailing slashes and query params
+  String _normalizePath(String path) {
+    // Remove trailing slash if not root path
+    final withoutTrailingSlash = path.endsWith('/') && path.length > 1
         ? path.substring(0, path.length - 1)
         : path;
 
     // Remove query parameters and fragments
-    final cleanPath = normalizedPath.split('?')[0].split('#')[0];
+    return withoutTrailingSlash.split('?')[0].split('#')[0];
+  }
 
+  // Helper method: Extract path segments from normalized path
+  List<String> _extractPathSegments(String normalizedPath) {
     // Split path into segments and remove empty segments
-    final segments = cleanPath.split('/').where((s) => s.isNotEmpty).toList();
+    return normalizedPath.split('/').where((s) => s.isNotEmpty).toList();
+  }
 
-    // Apply case insensitivity if needed, but preserve parameter names
-    if (!caseSensitive) {
-      for (int i = 0; i < segments.length; i++) {
-        final segment = segments[i];
-        // Only convert non-parameter segments to lowercase
-        if (!segment.startsWith(':') && !segment.startsWith('*')) {
-          segments[i] = segment.toLowerCase();
-        }
+  // Helper method: Apply case sensitivity rules to segments
+  List<String> _applyCaseSensitivityRules(List<String> segments) {
+    if (caseSensitive) {
+      return segments;
+    }
+
+    // Create a new list to avoid modifying the input
+    final result = <String>[];
+
+    for (final segment in segments) {
+      // Only convert non-parameter segments to lowercase
+      if (!segment.startsWith(':') && !segment.startsWith('*')) {
+        result.add(segment.toLowerCase());
+      } else {
+        result.add(segment);
       }
     }
 
-    // No special processing for format parameters here
-    // Format parameters are handled during route addition and parameter extraction
-
-    return segments;
+    return result;
   }
 
   // Internal method: Convert segments to path
@@ -686,83 +706,85 @@ class _RouterImpl<T> implements Router<T> {
     final result = <String, String>{};
     var unnamedIndex = 0;
 
-    // Debug print
-    print('DEBUG: Extracting params from segments: $segments');
-    print('DEBUG: Params info: $params');
     for (final param in params) {
-      print(
-          'DEBUG: Param[${param.index}]: name=${param.name}, optional=${param.optional}, formatInfo=${param.formatInfo}');
-    }
-
-    for (final param in params) {
+      // Check if segment exists for this parameter
       if (param.index >= segments.length) {
-        if (!param.optional) return null;
+        if (!param.optional) return null; // Required parameter missing
         continue;
       }
 
       final value = segments[param.index];
-      print('DEBUG: Processing param ${param.name} with value $value');
 
-      // Check if this parameter has format information
+      // Process different parameter types based on their characteristics
       if (param.formatInfo != null) {
-        final formatName = param.formatInfo!['name']!;
-        final isOptional = param.formatInfo!['optional'] == 'true';
-        print(
-            'DEBUG: Format param detected: formatName=$formatName, isOptional=$isOptional');
-
-        // If the value contains a dot, split it to extract format
-        if (value.contains('.')) {
-          final valueParts = value.split('.');
-          print('DEBUG: Value contains dot, parts: $valueParts');
-          if (valueParts.length == 2) {
-            // Store the main parameter value (before the dot)
-            result[param.name] = valueParts[0];
-            // Store the format parameter value (after the dot)
-            result[formatName] = valueParts[1];
-            print(
-                'DEBUG: Split into ${param.name}=${valueParts[0]} and $formatName=${valueParts[1]}');
-            continue;
-          }
+        // Handle format parameters (e.g. :filename.:format)
+        if (!_processFormatParameter(param, value, result)) {
+          return null; // Format parameter processing failed
         }
-
-        // If no dot in value, just use the whole value for the parameter
-        result[param.name] = value;
-        print(
-            'DEBUG: No dot in value, using whole value: ${param.name}=$value');
-
-        // If format is required but not found, return null
-        if (!isOptional) {
-          print('DEBUG: Format is required but not found, returning null');
-          return null;
-        }
-        continue;
-      }
-
-      // Handle named parameters like ':name' or wildcard parameters
-      if (param.name == '_') {
-        // This is a wildcard parameter ('**')
-        if (param.index < segments.length) {
-          // For wildcards, we combine all remaining segments
-          final remainingSegments = segments.sublist(param.index);
-          result['_${unnamedIndex++}'] = remainingSegments.join('/');
-          continue;
-        }
+      } else if (param.name == '_') {
+        // Handle unnamed wildcard parameters (**)
+        _processWildcardParameter(param, segments, result, unnamedIndex++);
       } else if (param.name.isNotEmpty) {
-        // For regular named parameters
-        if (param.index < segments.length) {
-          if (segments[0].startsWith('**:')) {
-            // For named wildcards like '**:path', combine all segments
-            final remainingSegments = segments.sublist(param.index);
-            result[param.name] = remainingSegments.join('/');
-          } else {
-            // Regular named parameter
-            result[param.name] = segments[param.index];
-          }
-        }
+        // Handle regular named parameters (:name)
+        _processNamedParameter(param, segments, result);
       }
     }
 
     return result;
+  }
+
+  // Helper method: Process format parameters like ':filename.:format'
+  bool _processFormatParameter(
+      _ParamInfo param, String value, Map<String, String> result) {
+    final formatName = param.formatInfo!['name']!;
+    final isOptional = param.formatInfo!['optional'] == 'true';
+
+    // If the value contains a dot, split it to extract format
+    if (value.contains('.')) {
+      final valueParts = value.split('.');
+      if (valueParts.length == 2) {
+        // Store the main parameter value (before the dot)
+        result[param.name] = valueParts[0];
+        // Store the format parameter value (after the dot)
+        result[formatName] = valueParts[1];
+        return true;
+      }
+    }
+
+    // If no dot in value, just use the whole value for the parameter
+    result[param.name] = value;
+
+    // If format is required but not found, return false to indicate failure
+    if (!isOptional) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // Helper method: Process wildcard parameters (**)
+  void _processWildcardParameter(_ParamInfo param, List<String> segments,
+      Map<String, String> result, int unnamedIndex) {
+    if (param.index < segments.length) {
+      // For wildcards, we combine all remaining segments
+      final remainingSegments = segments.sublist(param.index);
+      result['_$unnamedIndex'] = remainingSegments.join('/');
+    }
+  }
+
+  // Helper method: Process named parameters (:name)
+  void _processNamedParameter(
+      _ParamInfo param, List<String> segments, Map<String, String> result) {
+    if (param.index < segments.length) {
+      if (segments[0].startsWith('**:')) {
+        // For named wildcards like '**:path', combine all segments
+        final remainingSegments = segments.sublist(param.index);
+        result[param.name] = remainingSegments.join('/');
+      } else {
+        // Regular named parameter
+        result[param.name] = segments[param.index];
+      }
+    }
   }
 
   /// For debugging only - exposes the internal root node

@@ -106,6 +106,53 @@ void main() {
       expect(result!.data, equals('multiple-slashes'));
     });
 
+    // Enhanced path normalization test for multiple slashes
+    test('Path normalization with multiple slashes', () {
+      final router = createRouter<String>();
+
+      // Add a route with a normalized path
+      router.add('GET', '/api/users/profile', 'user-profile');
+
+      // Test variations with multiple slashes in different positions
+
+      // 1. Multiple slashes at the beginning
+      var result = router.find('GET', '///api/users/profile');
+      expect(result, isNotNull);
+      expect(result!.data, equals('user-profile'),
+          reason: 'Multiple slashes at the beginning should be normalized');
+
+      // 2. Multiple slashes in the middle
+      result = router.find('GET', '/api///users/profile');
+      expect(result, isNotNull);
+      expect(result!.data, equals('user-profile'),
+          reason: 'Multiple slashes in the middle should be normalized');
+
+      // 3. Multiple slashes at the end
+      result = router.find('GET', '/api/users/profile///');
+      expect(result, isNotNull);
+      expect(result!.data, equals('user-profile'),
+          reason: 'Multiple slashes at the end should be normalized');
+
+      // 4. Slashes everywhere
+      result = router.find('GET', '///api///users///profile///');
+      expect(result, isNotNull);
+      expect(result!.data, equals('user-profile'),
+          reason: 'Multiple slashes throughout should be normalized');
+
+      // 5. Mixed number of slashes
+      result = router.find('GET', '/api//users////profile/');
+      expect(result, isNotNull);
+      expect(result!.data, equals('user-profile'),
+          reason: 'Variable numbers of slashes should be normalized');
+
+      // 6. Add a route with multiple slashes and find with normalized path
+      router.add('GET', '///api///v2///status///', 'api-status');
+      result = router.find('GET', '/api/v2/status');
+      expect(result, isNotNull);
+      expect(result!.data, equals('api-status'),
+          reason: 'Routes added with multiple slashes should be normalized');
+    });
+
     test('Query parameters handling', () {
       final router = createRouter<String>();
 
