@@ -8,11 +8,12 @@ import 'types.dart';
 Router<T> createRouter<T>({
   String anyMethodToken = 'routerkit-method://any',
   bool caseSensitive = true,
-}) =>
-    _RouterImpl<T>(
-      anyMethodToken: anyMethodToken,
-      caseSensitive: caseSensitive,
-    );
+}) {
+  return _RouterImpl<T>(
+    anyMethodToken: anyMethodToken,
+    caseSensitive: caseSensitive,
+  );
+}
 
 /// Internal implementation of Router interface
 class _RouterImpl<T> implements Router<T> {
@@ -20,10 +21,7 @@ class _RouterImpl<T> implements Router<T> {
   ///
   /// [anyMethodToken] is the token used to represent any HTTP method
   /// [caseSensitive] determines whether path matching is case sensitive
-  _RouterImpl({
-    this.anyMethodToken = 'routerkit-method://any',
-    this.caseSensitive = true,
-  });
+  _RouterImpl({required this.anyMethodToken, required this.caseSensitive});
 
   /// Token used to represent any HTTP method
   @override
