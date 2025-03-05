@@ -202,20 +202,21 @@ void main() {
         // Add route with complex parameter pattern
         router.add('GET', '/files/:filename.:format', 'file-with-format');
 
-        // Test with various formats - adjusting expectations for actual behavior
+        // Test with various formats - now with proper format splitting
         final pdfResult = router.find('GET', '/files/document.pdf');
         expect(pdfResult?.data, equals('file-with-format'));
-        // The actual implementation doesn't split the format in this pattern
-        expect(pdfResult?.params, containsPair('filename', 'document.pdf'));
+        // The implementation should now split the format
+        expect(pdfResult?.params, containsPair('filename', 'document'));
+        expect(pdfResult?.params, containsPair('format', 'pdf'));
 
         final txtResult = router.find('GET', '/files/readme.txt');
         expect(txtResult?.data, equals('file-with-format'));
-        expect(txtResult?.params, containsPair('filename', 'readme.txt'));
+        expect(txtResult?.params, containsPair('filename', 'readme'));
+        expect(txtResult?.params, containsPair('format', 'txt'));
 
-        // Missing format should still match since it's treated as a parameter
+        // Missing format should not match since format is required
         final noFormatResult = router.find('GET', '/files/document');
-        expect(noFormatResult?.data, equals('file-with-format'));
-        expect(noFormatResult?.params, containsPair('filename', 'document'));
+        expect(noFormatResult, isNull);
       });
 
       test('Optional format parameter', () {
@@ -224,16 +225,24 @@ void main() {
         // Add route with optional format parameter
         router.add('GET', '/files/:filename.:format?', 'file-optional-format');
 
-        // Test with format - adjust for actual behavior
+        // Test with format - now with proper format splitting
         final withFormat = router.find('GET', '/files/document.pdf');
-        expect(withFormat?.data, equals('file-optional-format'));
-        // Current implementation keeps the format with the parameter name
-        expect(withFormat?.params, containsPair('filename', 'document.pdf'));
+        print('With format result: $withFormat');
+        print('With format params: ${withFormat?.params}');
 
-        // Test without format
+        expect(withFormat?.data, equals('file-optional-format'));
+        // Format should be split into separate parameters
+        expect(withFormat?.params, containsPair('filename', 'document'));
+        expect(withFormat?.params, containsPair('format', 'pdf'));
+
+        // Test without format - should still match with just the filename
         final withoutFormat = router.find('GET', '/files/document');
+        print('Without format result: $withoutFormat');
+        print('Without format params: ${withoutFormat?.params}');
+
         expect(withoutFormat?.data, equals('file-optional-format'));
         expect(withoutFormat?.params, containsPair('filename', 'document'));
+        expect(withoutFormat?.params, isNot(containsPair('format', anything)));
       });
 
       test('Multiple parameters with format', () {
@@ -242,14 +251,15 @@ void main() {
         // Add route with multiple parameters including format
         router.add('GET', '/:year/:month/:day/:title.:format?', 'blog-post');
 
-        // Test with format - adjust for actual behavior
+        // Test with format - now with proper format splitting
         final withFormat = router.find('GET', '/2023/03/15/hello-world.html');
         expect(withFormat?.data, equals('blog-post'));
         expect(withFormat?.params, containsPair('year', '2023'));
         expect(withFormat?.params, containsPair('month', '03'));
         expect(withFormat?.params, containsPair('day', '15'));
-        // Current implementation keeps the format with the parameter name
-        expect(withFormat?.params, containsPair('title', 'hello-world.html'));
+        // Format should be split into separate parameters
+        expect(withFormat?.params, containsPair('title', 'hello-world'));
+        expect(withFormat?.params, containsPair('format', 'html'));
 
         // Test without format
         final withoutFormat = router.find('GET', '/2023/03/15/hello-world');

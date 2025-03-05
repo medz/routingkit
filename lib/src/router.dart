@@ -47,37 +47,50 @@ class _RouterImpl<T> implements Router<T> {
     // Normalize HTTP method to uppercase
     final normalizedMethod = method?.toUpperCase();
 
-    // Special handling for optional format parameters like ':filename.:format?'
+    // Special handling for format parameters like ':filename.:format' and ':filename.:format?'
     String processedPath = path;
     Map<String, String>? formatParams;
 
-    if (path.contains('.') && path.contains(':') && path.contains('?')) {
-      // We might have a path with format parameter like '/files/:filename.:format?'
+    if (path.contains('.') && path.contains(':')) {
+      // We might have a path with format parameter like '/files/:filename.:format?' or '/files/:filename.:format'
+      print('DEBUG ADD: Found potential format parameter in path: $path');
       final parts = path.split('/');
       for (int i = 0; i < parts.length; i++) {
         final part = parts[i];
-        if (part.startsWith(':') && part.contains('.') && part.contains('?')) {
+        if (part.startsWith(':') && part.contains('.')) {
           // Found a potential format parameter segment
+          print('DEBUG ADD: Found format parameter segment: $part at index $i');
           final paramParts = part.split('.');
-          if (paramParts.length == 2 && paramParts[1].endsWith('?')) {
-            // We have ':name.:format?' pattern
+          if (paramParts.length == 2) {
+            // We have ':name.:format' or ':name.:format?' pattern
             final paramName = paramParts[0];
-            final formatParam =
-                paramParts[1].substring(0, paramParts[1].length - 1);
+            final formatPart = paramParts[1];
+            final isOptional = formatPart.endsWith('?');
+            final formatParam = isOptional
+                ? formatPart.substring(0, formatPart.length - 1)
+                : formatPart;
+
+            print(
+                'DEBUG ADD: Parsed format parameter: paramName=$paramName, formatParam=$formatParam, isOptional=$isOptional');
 
             // Replace with a simple parameter for the router
             parts[i] = paramName;
 
             // Store format information for later use
+            // The actual parameter index will be i-1 if the path starts with a slash (which it usually does)
+            // because the first element in the split result will be empty
+            final paramIndex = path.startsWith('/') ? i - 1 : i;
             formatParams = {
-              'paramIndex': i.toString(),
-              'formatName': formatParam,
-              'isOptional': 'true'
+              'paramIndex': paramIndex.toString(),
+              'formatName': formatParam.substring(1), // Remove the ':' prefix
+              'isOptional': isOptional.toString()
             };
+            print('DEBUG ADD: Created formatParams: $formatParams');
           }
         }
       }
       processedPath = parts.join('/');
+      print('DEBUG ADD: Processed path: $processedPath');
     }
 
     final segments = _pathToSegments(processedPath);
@@ -129,17 +142,26 @@ class _RouterImpl<T> implements Router<T> {
       final formatName = formatParams['formatName']!;
       final isOptional = formatParams['isOptional'] == 'true';
 
+      print(
+          'DEBUG ADD: Adding format info to param at index $paramIndex: formatName=$formatName, isOptional=$isOptional');
+      print('DEBUG ADD: Params before adding format info: $params');
+
       // Find the parameter at the specified index
       for (final param in params) {
+        print(
+            'DEBUG ADD: Checking param at index ${param.index} with name ${param.name}');
         if (param.index == paramIndex) {
           // Add format information to this parameter
           param.formatInfo = {
             'name': formatName,
             'optional': isOptional.toString()
           };
+          print('DEBUG ADD: Added format info to param: ${param.formatInfo}');
           break;
         }
       }
+
+      print('DEBUG ADD: Params after adding format info: $params');
     }
 
     // Add route data to the node
@@ -185,22 +207,36 @@ class _RouterImpl<T> implements Router<T> {
       // First check for exact method match
       final methodValues = node.methods?[normalizedMethod];
       if (methodValues != null && methodValues.isNotEmpty) {
+        final params = includeParams
+            ? _extractParams(methodValues.first.params, segments)
+            : null;
+        // If params extraction failed (e.g., required format parameter not found), return null
+        if (includeParams &&
+            methodValues.first.params != null &&
+            params == null) {
+          return null;
+        }
         return MatchedRoute(
           data: methodValues.first.data,
-          params: includeParams
-              ? _extractParams(methodValues.first.params, segments)
-              : null,
+          params: params,
         );
       }
 
       // Then check for wildcard method match (method is null)
       final wildcardMethodValues = node.methods?[anyMethodToken];
       if (wildcardMethodValues != null && wildcardMethodValues.isNotEmpty) {
+        final params = includeParams
+            ? _extractParams(wildcardMethodValues.first.params, segments)
+            : null;
+        // If params extraction failed, return null
+        if (includeParams &&
+            wildcardMethodValues.first.params != null &&
+            params == null) {
+          return null;
+        }
         return MatchedRoute(
           data: wildcardMethodValues.first.data,
-          params: includeParams
-              ? _extractParams(wildcardMethodValues.first.params, segments)
-              : null,
+          params: params,
         );
       }
     }
@@ -210,9 +246,16 @@ class _RouterImpl<T> implements Router<T> {
         _findInTree(_root, normalizedMethod, segments, 0)?.firstOrNull;
     if (match == null) return null;
 
+    final params =
+        includeParams ? _extractParams(match.params, segments) : null;
+    // If params extraction failed, return null
+    if (includeParams && match.params != null && params == null) {
+      return null;
+    }
+
     return MatchedRoute(
       data: match.data,
-      params: includeParams ? _extractParams(match.params, segments) : null,
+      params: params,
     );
   }
 
@@ -616,33 +659,8 @@ class _RouterImpl<T> implements Router<T> {
       }
     }
 
-    // Process segments for special format parameters like ':filename.:format?'
-    for (int i = 0; i < segments.length; i++) {
-      final segment = segments[i];
-      // Check for pattern like ':name.:format?' or ':name.:format'
-      if (segment.startsWith(':') && segment.contains('.')) {
-        final parts = segment.split('.');
-        if (parts.length == 2) {
-          // Handle the pattern ':name.:format?' or ':name.:format'
-          final nameParam = parts[0];
-          final formatParam = parts[1];
-          final isFormatOptional = formatParam.endsWith('?');
-
-          // Update the segments[i] to just be the parameter name without the '?'
-          segments[i] = nameParam;
-
-          // Add special handling for this pattern
-          if (isFormatOptional) {
-            // Mark this segment as having an optional format parameter
-            segments[i] =
-                '$nameParam with optional format ${formatParam.substring(0, formatParam.length - 1)}';
-          } else {
-            // Mark this segment as having a required format parameter
-            segments[i] = '$nameParam with format $formatParam';
-          }
-        }
-      }
-    }
+    // No special processing for format parameters here
+    // Format parameters are handled during route addition and parameter extraction
 
     return segments;
   }
@@ -654,11 +672,6 @@ class _RouterImpl<T> implements Router<T> {
 
   // Internal method: Create parameter pattern
   String _createParamPattern(String segment) {
-    // Check if this is a special segment with format information
-    if (segment.contains(' with ')) {
-      // Extract just the parameter name for pattern creation
-      return segment.split(' with ')[0].substring(1);
-    }
     // Return the original parameter name without ':' prefix, preserving case
     return segment.substring(1);
   }
@@ -673,6 +686,14 @@ class _RouterImpl<T> implements Router<T> {
     final result = <String, String>{};
     var unnamedIndex = 0;
 
+    // Debug print
+    print('DEBUG: Extracting params from segments: $segments');
+    print('DEBUG: Params info: $params');
+    for (final param in params) {
+      print(
+          'DEBUG: Param[${param.index}]: name=${param.name}, optional=${param.optional}, formatInfo=${param.formatInfo}');
+    }
+
     for (final param in params) {
       if (param.index >= segments.length) {
         if (!param.optional) return null;
@@ -680,64 +701,45 @@ class _RouterImpl<T> implements Router<T> {
       }
 
       final value = segments[param.index];
+      print('DEBUG: Processing param ${param.name} with value $value');
 
       // Check if this parameter has format information
       if (param.formatInfo != null) {
         final formatName = param.formatInfo!['name']!;
         final isOptional = param.formatInfo!['optional'] == 'true';
+        print(
+            'DEBUG: Format param detected: formatName=$formatName, isOptional=$isOptional');
 
         // If the value contains a dot, split it to extract format
         if (value.contains('.')) {
           final valueParts = value.split('.');
+          print('DEBUG: Value contains dot, parts: $valueParts');
           if (valueParts.length == 2) {
+            // Store the main parameter value (before the dot)
             result[param.name] = valueParts[0];
+            // Store the format parameter value (after the dot)
             result[formatName] = valueParts[1];
+            print(
+                'DEBUG: Split into ${param.name}=${valueParts[0]} and $formatName=${valueParts[1]}');
             continue;
           }
         }
 
         // If no dot in value, just use the whole value for the parameter
         result[param.name] = value;
+        print(
+            'DEBUG: No dot in value, using whole value: ${param.name}=$value');
 
-        // If format is optional, we're done
-        // If not optional, this is an error case
+        // If format is required but not found, return null
         if (!isOptional) {
+          print('DEBUG: Format is required but not found, returning null');
           return null;
         }
         continue;
       }
 
-      // Handle special format parameters with 'with' syntax (from previous implementation)
-      if (param.name.contains(' with ')) {
-        final paramParts = param.name.split(' with ');
-        final paramName = paramParts[0];
-
-        // Check if this is a format parameter
-        if (paramParts[1].startsWith('format')) {
-          // Extract format information
-          final formatParam = paramParts[1].substring(7); // remove 'format '
-
-          // If the value contains a dot, split it to extract format
-          if (value.contains('.')) {
-            final valueParts = value.split('.');
-            if (valueParts.length >= 2) {
-              result[paramName] = valueParts[0];
-              result[formatParam] = valueParts[1];
-              continue;
-            }
-          }
-
-          // If no dot in value, just use the whole value for the parameter
-          result[paramName] = value;
-          // If format is optional, don't add it to results
-          // Otherwise format would be required but not found, so we'll return null later
-          if (param.optional) {
-            continue;
-          } else {
-            return null;
-          }
-        }
-      } else if (param.name == '_') {
+      // Handle named parameters like ':name' or wildcard parameters
+      if (param.name == '_') {
         // This is a wildcard parameter ('**')
         if (param.index < segments.length) {
           // For wildcards, we combine all remaining segments
@@ -762,6 +764,9 @@ class _RouterImpl<T> implements Router<T> {
 
     return result;
   }
+
+  /// For debugging only - exposes the internal root node
+  _RouterNode<T> debugGetRootNode() => _root;
 }
 
 /// Internal class: Router node
