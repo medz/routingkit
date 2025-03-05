@@ -6,9 +6,21 @@ void main() {
     test('Empty path handling', () {
       final router = createRouter<String>();
 
-      // Should handle empty path
+      // Should handle empty path and its equivalents
       router.add('GET', '', 'empty-path');
-      final result = router.find('GET', '');
+
+      // Test empty path
+      var result = router.find('GET', '');
+      expect(result, isNotNull);
+      expect(result!.data, equals('empty-path'));
+
+      // Test root path (should be equivalent)
+      result = router.find('GET', '/');
+      expect(result, isNotNull);
+      expect(result!.data, equals('empty-path'));
+
+      // Test multiple slashes (should be equivalent)
+      result = router.find('GET', '///');
       expect(result, isNotNull);
       expect(result!.data, equals('empty-path'));
     });
@@ -16,9 +28,21 @@ void main() {
     test('Root path handling', () {
       final router = createRouter<String>();
 
-      // Should handle root path
+      // Should handle root path and its equivalents
       router.add('GET', '/', 'root-path');
-      final result = router.find('GET', '/');
+
+      // Test root path
+      var result = router.find('GET', '/');
+      expect(result, isNotNull);
+      expect(result!.data, equals('root-path'));
+
+      // Test empty path (should be equivalent)
+      result = router.find('GET', '');
+      expect(result, isNotNull);
+      expect(result!.data, equals('root-path'));
+
+      // Test multiple slashes (should be equivalent)
+      result = router.find('GET', '///');
       expect(result, isNotNull);
       expect(result!.data, equals('root-path'));
     });
