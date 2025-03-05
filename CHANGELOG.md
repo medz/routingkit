@@ -1,3 +1,11 @@
+## 5.1.2
+
+### Improvements
+
+- Enhanced API documentation with detailed comments for better developer experience
+- Added comprehensive test suite including functional tests, performance benchmarks, and HTTP server examples
+- Fixed code style issues in test files to comply with Dart linting rules
+
 ## 5.1.1
 
 ### Documentation
