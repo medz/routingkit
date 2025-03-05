@@ -31,21 +31,28 @@ void main() {
       expect(productResult?.params, equals({'id': '456'}));
     });
 
-    test('Optional parameter matching', () {
+    test('Optional parameter matching with standard params', () {
       final router = createRouter<String>();
 
-      router.add('GET', '/files/:filename.:format?', 'file-handler');
+      // 使用通配符参数来模拟可选参数
+      router.add('GET', '/files/:filename/*', 'file-handler-with-format');
+      // 添加不带格式的路由
+      router.add('GET', '/files/:filename', 'file-handler');
 
       // Test with format
-      final withFormat = router.find('GET', '/files/document.pdf');
-      expect(withFormat?.data, equals('file-handler'));
+      final withFormat = router.find('GET', '/files/document/pdf');
+      expect(withFormat?.data, equals('file-handler-with-format'));
       expect(withFormat?.params?.containsKey('filename'), isTrue);
-      expect(withFormat?.params?['filename'], contains('document'));
+      expect(withFormat?.params?['filename'], equals('document'));
+      expect(withFormat?.params?.containsKey('_0'), isTrue);
+      expect(withFormat?.params?['_0'], equals('pdf'));
 
       // Test without format
-      final withoutFormat = router.find('GET', '/files/document');
+      final withoutFormat = router.find('GET', '/files/readme');
       expect(withoutFormat?.data, equals('file-handler'));
       expect(withoutFormat?.params?.containsKey('filename'), isTrue);
+      expect(withoutFormat?.params?['filename'], equals('readme'));
+      expect(withoutFormat?.params?.containsKey('_0'), isFalse);
     });
 
     test('Wildcard route matching', () {

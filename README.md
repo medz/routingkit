@@ -21,6 +21,8 @@ RoutingKit - A lightweight, high-performance router for Dart with an elegant obj
 - 🧰 **Object-Oriented API**: Clean, chainable methods for route management
 - 🔠 **Case Sensitivity Options**: Configure whether path matching is case sensitive or not
 
+> **IMPORTANT NOTICE**: As of version 0.2.0, format parameter support (`:filename.:format?`) has been removed due to implementation complexity. Please use standard path parameters instead. See the [Migration Guides](#migration-guides) for details.
+
 ## Installation
 
 Run this command:
@@ -72,8 +74,9 @@ router.add('GET', '/users/:id', 'User details handler');
 // Multiple parameters
 router.add('GET', '/users/:id/posts/:postId', 'User post handler');
 
-// Optional format parameter
-router.add('GET', '/files/:filename.:format?', 'File handler');
+// Optional parameters (using separate routes)
+router.add('GET', '/files/:filename/*', 'File with format handler');
+router.add('GET', '/files/:filename', 'File without format handler');
 
 // Wildcard routes
 router.add('GET', '/assets/**', 'Static assets handler');
@@ -229,7 +232,54 @@ The file provides AI-friendly documentation including:
 - API reference and examples
 - Links to relevant implementation files
 
-## Migration from v4.x
+## Migration Guides
+
+### Migration from Format Parameters
+
+In versions prior to 0.2.0, RoutingKit supported format parameters using the syntax `:filename.:format?`. This feature has been removed due to implementation complexity and inconsistent behavior.
+
+#### How to Migrate
+
+1. **Replace format parameters with standard path parameters**:
+
+   Before:
+   ```dart
+   router.add('GET', '/files/:filename.:format?', 'File handler');
+   ```
+
+   After:
+   ```dart
+   // For required format
+   router.add('GET', '/files/:filename/:format', 'File handler');
+   
+   // For optional format (using two routes)
+   router.add('GET', '/files/:filename/*', 'File with format handler');
+   router.add('GET', '/files/:filename', 'File without format handler');
+   ```
+
+2. **Update parameter access**:
+
+   Before:
+   ```dart
+   final match = router.find('GET', '/files/document.pdf');
+   final filename = match?.params['filename']; // 'document'
+   final format = match?.params['format'];     // 'pdf'
+   ```
+
+   After:
+   ```dart
+   // For standard path parameters
+   final match = router.find('GET', '/files/document/pdf');
+   final filename = match?.params['filename']; // 'document'
+   final format = match?.params['format'];     // 'pdf'
+   
+   // For wildcard approach
+   final match = router.find('GET', '/files/document/pdf');
+   final filename = match?.params['filename']; // 'document'
+   final format = match?.params['_0'];         // 'pdf'
+   ```
+
+### Migration from v4.x
 
 See the [Migration Guide](https://github.com/medz/routingkit/blob/main/CHANGELOG.md#migration-guide) in the changelog.
 

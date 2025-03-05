@@ -153,6 +153,159 @@ void main() {
           reason: 'Routes added with multiple slashes should be normalized');
     });
 
+    // Enhanced test for trailing slash handling
+    test('Comprehensive trailing slash handling', () {
+      final router = createRouter<String>();
+
+      // Test scenario 1: Single route without trailing slash
+      router.add('GET', '/products', 'products-list');
+
+      // Both with and without trailing slash should match
+      expect(router.find('GET', '/products')?.data, equals('products-list'));
+      expect(router.find('GET', '/products/')?.data, equals('products-list'));
+
+      // Test scenario 2: Nested routes with and without trailing slashes
+      router.add('GET', '/categories', 'categories-list');
+      router.add('GET', '/categories/:id', 'category-detail');
+
+      // Both paths should be matched correctly
+      expect(
+          router.find('GET', '/categories')?.data, equals('categories-list'));
+      expect(
+          router.find('GET', '/categories/')?.data, equals('categories-list'));
+      expect(router.find('GET', '/categories/123')?.data,
+          equals('category-detail'));
+      expect(router.find('GET', '/categories/123/')?.data,
+          equals('category-detail'));
+
+      // Test scenario 3: Root path consistency
+      router.add('GET', '/', 'root-page');
+      expect(router.find('GET', '')?.data, equals('root-page'));
+      expect(router.find('GET', '/')?.data, equals('root-page'));
+      expect(router.find('GET', '///')?.data, equals('root-page'));
+
+      // Test scenario 4: Priority with explicit routes
+      router.add('GET', '/blog/', 'blog-with-slash');
+      router.add('GET', '/blog', 'blog-without-slash');
+
+      // The routes are matched based on the router's implementation
+      // - Both routes with and without slash are treated as the same
+      // - The first registered route takes precedence
+      expect(router.find('GET', '/blog')?.data, equals('blog-with-slash'));
+      expect(router.find('GET', '/blog/')?.data, equals('blog-with-slash'));
+    });
+
+    // Test URL encoding and decoding handling
+    test('URL encoding and decoding handling', () {
+      final router = createRouter<String>();
+
+      // Test scenario 1: Route with space in path
+      router.add('GET', '/user profile', 'profile-with-space');
+      expect(router.find('GET', '/user%20profile')?.data, equals(null),
+          reason:
+              'URL encoded paths are treated as distinct from decoded paths');
+
+      // Test scenario 2: Register with encoded URL
+      router.add('GET', '/user%20profile', 'profile-encoded');
+      expect(router.find('GET', '/user%20profile')?.data,
+          equals('profile-encoded'));
+
+      // Test scenario 3: Special characters
+      router.add('GET', '/search/:query', 'search-results');
+
+      final result1 = router.find('GET', '/search/dart+language');
+      expect(result1, isNotNull);
+      expect(result1!.params?['query'], equals('dart+language'));
+
+      final result2 = router.find('GET', '/search/c%23+tutorial');
+      expect(result2, isNotNull);
+      expect(result2!.params?['query'], equals('c%23+tutorial'));
+
+      // Test scenario 4: Encoded slashes
+      router.add('GET', '/encoded-path', 'encoded-path');
+      expect(router.find('GET', '/encoded%2Fpath')?.data, equals(null),
+          reason: '%2F (encoded slash) is not equivalent to actual slash');
+    });
+
+    // Test dot (.) handling in path segments
+    test('Dot handling in path segments', () {
+      final router = createRouter<String>();
+
+      // Test scenario 1: File extensions
+      router.add('GET', '/documents/report.pdf', 'pdf-file');
+      router.add('GET', '/documents/report.docx', 'docx-file');
+
+      expect(router.find('GET', '/documents/report.pdf')?.data,
+          equals('pdf-file'));
+      expect(router.find('GET', '/documents/report.docx')?.data,
+          equals('docx-file'));
+
+      // Test scenario 2: Multiple dots
+      router.add('GET', '/files/image.backup.jpg', 'backup-image');
+      expect(router.find('GET', '/files/image.backup.jpg')?.data,
+          equals('backup-image'));
+
+      // Test scenario 3: Parameters containing dots
+      router.add('GET', '/files/:filename', 'file-with-dots');
+
+      final result = router.find('GET', '/files/report.pdf');
+      expect(result, isNotNull);
+      expect(result!.data, equals('file-with-dots'));
+      expect(result.params?['filename'], equals('report.pdf'));
+
+      // Test scenario 4: Hidden files (starting with dot)
+      router.add('GET', '/config/.env', 'env-file');
+      expect(router.find('GET', '/config/.env')?.data, equals('env-file'));
+    });
+
+    // Mixed normalization scenarios
+    test('Mixed normalization scenarios', () {
+      final router = createRouter<String>();
+
+      // Add test routes
+      router.add('GET', '/api////v1/users/:id///profile/', 'user-profile');
+      router.add('GET', '///api/v1///files/:filename', 'file-download');
+
+      // Test scenario 1: Multiple slashes + parameters
+      final result1 = router.find('GET', '/api/v1/users/123/profile');
+      expect(result1, isNotNull);
+      expect(result1!.data, equals('user-profile'));
+      expect(result1.params?['id'], equals('123'));
+
+      // Test scenario 2: Multiple slashes with file parameter
+      final result2 = router.find('GET', '/api/v1/files/document.pdf');
+      expect(result2, isNotNull);
+      expect(result2!.data, equals('file-download'));
+      expect(result2.params?['filename'], equals('document.pdf'));
+
+      // Test scenario 3: Regular path normalization
+      final result3 = router.find('GET', '/api/v1/files/readme');
+      expect(result3, isNotNull);
+      expect(result3!.data, equals('file-download'));
+      expect(result3.params?['filename'], equals('readme'));
+
+      // Test scenario 4: Case sensitivity with normalization
+      router.add('GET', '/API/V1/status', 'api-status-uppercase');
+
+      // Case sensitive router (default)
+      expect(router.find('GET', '/api/v1/status'), isNull,
+          reason: 'Default router is case sensitive');
+      expect(router.find('GET', '/API/V1/status')?.data,
+          equals('api-status-uppercase'));
+
+      // Case insensitive router
+      final caseInsensitiveRouter = createRouter<String>(caseSensitive: false);
+      caseInsensitiveRouter.add(
+          'GET', '/API/V1/status', 'api-status-uppercase');
+
+      expect(caseInsensitiveRouter.find('GET', '/api/v1/status')?.data,
+          equals('api-status-uppercase'),
+          reason: 'Case insensitive router normalizes path');
+      expect(caseInsensitiveRouter.find('GET', '/aPi/V1/StAtUs')?.data,
+          equals('api-status-uppercase'),
+          reason: 'Case insensitive router normalizes path with mixed case');
+    });
+
     test('Query parameters handling', () {
       final router = createRouter<String>();
 
@@ -243,78 +396,69 @@ void main() {
 
     // 新增测试：复杂参数提取
     group('Complex Parameter Extraction', () {
-      test('Multiple parameters in one segment', () {
+      // 注意：格式参数支持已移除，以下测试使用标准参数替代
+
+      test('Parameters with filename extensions', () {
         final router = createRouter<String>();
 
-        // Add route with complex parameter pattern
-        router.add('GET', '/files/:filename.:format', 'file-with-format');
+        // 使用标准参数处理文件名
+        router.add('GET', '/files/:filename', 'file-handler');
 
-        // Test with various formats - now with proper format splitting
+        // 测试含有扩展名的文件名
         final pdfResult = router.find('GET', '/files/document.pdf');
-        expect(pdfResult?.data, equals('file-with-format'));
-        // The implementation should now split the format
-        expect(pdfResult?.params, containsPair('filename', 'document'));
-        expect(pdfResult?.params, containsPair('format', 'pdf'));
+        expect(pdfResult?.data, equals('file-handler'));
+        expect(pdfResult?.params, containsPair('filename', 'document.pdf'));
 
         final txtResult = router.find('GET', '/files/readme.txt');
-        expect(txtResult?.data, equals('file-with-format'));
-        expect(txtResult?.params, containsPair('filename', 'readme'));
-        expect(txtResult?.params, containsPair('format', 'txt'));
-
-        // Missing format should not match since format is required
-        final noFormatResult = router.find('GET', '/files/document');
-        expect(noFormatResult, isNull);
+        expect(txtResult?.data, equals('file-handler'));
+        expect(txtResult?.params, containsPair('filename', 'readme.txt'));
       });
 
-      test('Optional format parameter', () {
+      test('Optional path parameters', () {
         final router = createRouter<String>();
 
-        // Add route with optional format parameter
-        router.add('GET', '/files/:filename.:format?', 'file-optional-format');
+        // 使用通配符参数来模拟可选参数
+        router.add('GET', '/files/:filename/*', 'file-with-extension');
 
-        // Test with format - now with proper format splitting
-        final withFormat = router.find('GET', '/files/document.pdf');
-        print('With format result: $withFormat');
-        print('With format params: ${withFormat?.params}');
+        // 测试带有扩展名
+        final withExt = router.find('GET', '/files/document/pdf');
+        expect(withExt?.data, equals('file-with-extension'));
+        expect(withExt?.params, containsPair('filename', 'document'));
+        expect(withExt?.params, containsPair('_0', 'pdf'));
 
-        expect(withFormat?.data, equals('file-optional-format'));
-        // Format should be split into separate parameters
-        expect(withFormat?.params, containsPair('filename', 'document'));
-        expect(withFormat?.params, containsPair('format', 'pdf'));
-
-        // Test without format - should still match with just the filename
-        final withoutFormat = router.find('GET', '/files/document');
-        print('Without format result: $withoutFormat');
-        print('Without format params: ${withoutFormat?.params}');
-
-        expect(withoutFormat?.data, equals('file-optional-format'));
-        expect(withoutFormat?.params, containsPair('filename', 'document'));
-        expect(withoutFormat?.params, isNot(containsPair('format', anything)));
+        // 测试不带扩展名 - 注意：这个路由不会匹配，因为我们需要一个单独的路由
+        router.add('GET', '/files/:filename', 'file-without-extension');
+        final withoutExt = router.find('GET', '/files/document');
+        expect(withoutExt?.data, equals('file-without-extension'));
+        expect(withoutExt?.params, containsPair('filename', 'document'));
       });
 
-      test('Multiple parameters with format', () {
+      test('Multiple parameters example', () {
         final router = createRouter<String>();
 
-        // Add route with multiple parameters including format
-        router.add('GET', '/:year/:month/:day/:title.:format?', 'blog-post');
+        // 使用多个标准参数和通配符参数
+        router.add(
+            'GET', '/:year/:month/:day/:article/*', 'blog-post-with-format');
 
-        // Test with format - now with proper format splitting
-        final withFormat = router.find('GET', '/2023/03/15/hello-world.html');
-        expect(withFormat?.data, equals('blog-post'));
+        // 添加不带格式的路由
+        router.add('GET', '/:year/:month/:day/:article', 'blog-post');
+
+        // 测试带有格式参数
+        final withFormat = router.find('GET', '/2023/03/15/hello-world/html');
+        expect(withFormat?.data, equals('blog-post-with-format'));
         expect(withFormat?.params, containsPair('year', '2023'));
         expect(withFormat?.params, containsPair('month', '03'));
         expect(withFormat?.params, containsPair('day', '15'));
-        // Format should be split into separate parameters
-        expect(withFormat?.params, containsPair('title', 'hello-world'));
-        expect(withFormat?.params, containsPair('format', 'html'));
+        expect(withFormat?.params, containsPair('article', 'hello-world'));
+        expect(withFormat?.params, containsPair('_0', 'html'));
 
-        // Test without format
+        // 测试不带格式参数
         final withoutFormat = router.find('GET', '/2023/03/15/hello-world');
         expect(withoutFormat?.data, equals('blog-post'));
         expect(withoutFormat?.params, containsPair('year', '2023'));
         expect(withoutFormat?.params, containsPair('month', '03'));
         expect(withoutFormat?.params, containsPair('day', '15'));
-        expect(withoutFormat?.params, containsPair('title', 'hello-world'));
+        expect(withoutFormat?.params, containsPair('article', 'hello-world'));
       });
     });
 

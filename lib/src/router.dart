@@ -47,53 +47,7 @@ class _RouterImpl<T> implements Router<T> {
     // Normalize HTTP method to uppercase
     final normalizedMethod = method?.toUpperCase();
 
-    // Special handling for format parameters like ':filename.:format' and ':filename.:format?'
-    String processedPath = path;
-    Map<String, String>? formatParams;
-
-    if (path.contains('.') && path.contains(':')) {
-      // We might have a path with format parameter like '/files/:filename.:format?' or '/files/:filename.:format'
-      print('DEBUG ADD: Found potential format parameter in path: $path');
-      final parts = path.split('/');
-      for (int i = 0; i < parts.length; i++) {
-        final part = parts[i];
-        if (part.startsWith(':') && part.contains('.')) {
-          // Found a potential format parameter segment
-          print('DEBUG ADD: Found format parameter segment: $part at index $i');
-          final paramParts = part.split('.');
-          if (paramParts.length == 2) {
-            // We have ':name.:format' or ':name.:format?' pattern
-            final paramName = paramParts[0];
-            final formatPart = paramParts[1];
-            final isOptional = formatPart.endsWith('?');
-            final formatParam = isOptional
-                ? formatPart.substring(0, formatPart.length - 1)
-                : formatPart;
-
-            print(
-                'DEBUG ADD: Parsed format parameter: paramName=$paramName, formatParam=$formatParam, isOptional=$isOptional');
-
-            // Replace with a simple parameter for the router
-            parts[i] = paramName;
-
-            // Store format information for later use
-            // The actual parameter index will be i-1 if the path starts with a slash (which it usually does)
-            // because the first element in the split result will be empty
-            final paramIndex = path.startsWith('/') ? i - 1 : i;
-            formatParams = {
-              'paramIndex': paramIndex.toString(),
-              'formatName': formatParam.substring(1), // Remove the ':' prefix
-              'isOptional': isOptional.toString()
-            };
-            print('DEBUG ADD: Created formatParams: $formatParams');
-          }
-        }
-      }
-      processedPath = parts.join('/');
-      print('DEBUG ADD: Processed path: $processedPath');
-    }
-
-    final segments = _pathToSegments(processedPath);
+    final segments = _pathToSegments(path);
     final params = <_ParamInfo>[];
 
     var node = _root;
@@ -132,36 +86,6 @@ class _RouterImpl<T> implements Router<T> {
 
       // Handle static path segment
       node = node.static.putIfAbsent(segment, () => _RouterNode(segment));
-    }
-
-    // Add format parameter information if present
-    if (formatParams != null) {
-      // Add a special parameter that indicates this is a format parameter
-      final paramIndexStr = formatParams['paramIndex']!;
-      final paramIndex = int.parse(paramIndexStr);
-      final formatName = formatParams['formatName']!;
-      final isOptional = formatParams['isOptional'] == 'true';
-
-      print(
-          'DEBUG ADD: Adding format info to param at index $paramIndex: formatName=$formatName, isOptional=$isOptional');
-      print('DEBUG ADD: Params before adding format info: $params');
-
-      // Find the parameter at the specified index
-      for (final param in params) {
-        print(
-            'DEBUG ADD: Checking param at index ${param.index} with name ${param.name}');
-        if (param.index == paramIndex) {
-          // Add format information to this parameter
-          param.formatInfo = {
-            'name': formatName,
-            'optional': isOptional.toString()
-          };
-          print('DEBUG ADD: Added format info to param: ${param.formatInfo}');
-          break;
-        }
-      }
-
-      print('DEBUG ADD: Params after adding format info: $params');
     }
 
     // Add route data to the node
@@ -716,12 +640,7 @@ class _RouterImpl<T> implements Router<T> {
       final value = segments[param.index];
 
       // Process different parameter types based on their characteristics
-      if (param.formatInfo != null) {
-        // Handle format parameters (e.g. :filename.:format)
-        if (!_processFormatParameter(param, value, result)) {
-          return null; // Format parameter processing failed
-        }
-      } else if (param.name == '_') {
+      if (param.name == '_') {
         // Handle unnamed wildcard parameters (**)
         _processWildcardParameter(param, segments, result, unnamedIndex++);
       } else if (param.name.isNotEmpty) {
@@ -731,35 +650,6 @@ class _RouterImpl<T> implements Router<T> {
     }
 
     return result;
-  }
-
-  // Helper method: Process format parameters like ':filename.:format'
-  bool _processFormatParameter(
-      _ParamInfo param, String value, Map<String, String> result) {
-    final formatName = param.formatInfo!['name']!;
-    final isOptional = param.formatInfo!['optional'] == 'true';
-
-    // If the value contains a dot, split it to extract format
-    if (value.contains('.')) {
-      final valueParts = value.split('.');
-      if (valueParts.length == 2) {
-        // Store the main parameter value (before the dot)
-        result[param.name] = valueParts[0];
-        // Store the format parameter value (after the dot)
-        result[formatName] = valueParts[1];
-        return true;
-      }
-    }
-
-    // If no dot in value, just use the whole value for the parameter
-    result[param.name] = value;
-
-    // If format is required but not found, return false to indicate failure
-    if (!isOptional) {
-      return false;
-    }
-
-    return true;
   }
 
   // Helper method: Process wildcard parameters (**)
@@ -828,7 +718,4 @@ class _ParamInfo {
   final int index;
   final String name;
   final bool optional;
-
-  // Format parameter info for special cases like ':filename.:format?'
-  Map<String, String>? formatInfo;
 }
