@@ -21,8 +21,6 @@ RoutingKit - A lightweight, high-performance router for Dart with an elegant obj
 - 🧰 **Object-Oriented API**: Clean interface with clear separation of concerns
 - 🔠 **Case Sensitivity Options**: Configure whether path matching is case sensitive or not
 
-> **IMPORTANT NOTICE**: As of version 0.2.0, format parameter support (`:filename.:format?`) has been removed due to implementation complexity. Please use standard path parameters instead. See the [Migration Guides](#migration-guides) for details.
-
 ## Installation
 
 Run this command:
@@ -178,22 +176,22 @@ import 'package:routingkit/routingkit.dart';
 
 void main() async {
   final router = createRouter<Function>();
-  
+
   // Define routes with handler functions
   router.add('GET', '/', (req, res) => res.write('Home page'));
   router.add('GET', '/users', (req, res) => res.write('Users list'));
   router.add('GET', '/users/:id', (req, res) => res.write('User ${req.params['id']}'));
-  
+
   final server = await HttpServer.bind('localhost', 8080);
   print('Server running on http://localhost:8080');
-  
+
   await for (final request in server) {
     final response = request.response;
     final path = request.uri.path;
     final method = request.method;
-    
+
     final match = router.find(method, path);
-    
+
     if (match != null) {
       final handler = match.data;
       // Add params to request for handler access
@@ -203,7 +201,7 @@ void main() async {
       response.statusCode = HttpStatus.notFound;
       response.write('404 Not Found');
     }
-    
+
     await response.close();
   }
 }
@@ -245,7 +243,7 @@ In versions prior to 0.2.0, RoutingKit supported format parameters using the syn
    ```dart
    // For required format
    router.add('GET', '/files/:filename/:format', 'File handler');
-   
+
    // For optional format (using two routes)
    router.add('GET', '/files/:filename/*', 'File with format handler');
    router.add('GET', '/files/:filename', 'File without format handler');
@@ -266,7 +264,7 @@ In versions prior to 0.2.0, RoutingKit supported format parameters using the syn
    final match = router.find('GET', '/files/document/pdf');
    final filename = match?.params['filename']; // 'document'
    final format = match?.params['format'];     // 'pdf'
-   
+
    // For wildcard approach
    final match = router.find('GET', '/files/document/pdf');
    final filename = match?.params['filename']; // 'document'
