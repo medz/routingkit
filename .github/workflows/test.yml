@@ -19,9 +19,4 @@ jobs:
       - name: Analyze project source
         run: dart analyze
       - name: Run tests
-        run: dart test --coverage coverage
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: coverage
+        run: dart test
