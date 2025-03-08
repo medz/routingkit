@@ -12,7 +12,7 @@
 /// It's designed to be fast, flexible, and have a clean interface with
 /// minimal dependencies, making it suitable for both web servers and client-side
 /// applications.
-library routingkit;
+library;
 
 export 'src/create_router.dart';
 export 'src/types.dart';
